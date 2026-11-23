@@ -52,7 +52,7 @@ def _session_inflation(history: pd.DataFrame) -> pd.DataFrame:
             "product": product,
             "base_price": base,
             "latest_price": latest,
-            "change_pct": ((latest / base) - 1) * 100 if base else 0,
+            "change_pct": round(((latest / base) - 1) * 100, 2) if base else 0,
         })
     return pd.DataFrame(results).sort_values("change_pct", ascending=False)
 
