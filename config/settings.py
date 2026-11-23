@@ -28,6 +28,7 @@ DEFAULT_COUNTRY = os.getenv("DEFAULT_COUNTRY", "IN")
 DEFAULT_CURRENCY = os.getenv("DEFAULT_CURRENCY", "INR")
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "10"))
 RECEIPT_RETENTION_DAYS = int(os.getenv("RECEIPT_RETENTION_DAYS", "0"))
+PUBLIC_DEMO = os.getenv("PUBLIC_DEMO", "true").strip().lower() in {"1", "true", "yes"}
 
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
