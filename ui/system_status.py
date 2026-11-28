@@ -1,4 +1,4 @@
-"""Phase 1 health check page: proves DB, config and OCR tooling are wired up."""
+"""Installation health check: OCR tooling, database and package versions."""
 import sys
 from importlib.metadata import PackageNotFoundError, version
 
@@ -11,8 +11,10 @@ from config import settings
 from modules.data_management.database import session_scope
 from modules.data_management.models import CPIData, Product, PurchaseItem, Receipt
 
-PACKAGES = ["streamlit", "pandas", "numpy", "SQLAlchemy", "pytesseract",
-            "opencv-python", "Pillow", "pdf2image", "plotly", "requests"]
+PACKAGES = [
+    "streamlit", "pandas", "numpy", "SQLAlchemy", "pytesseract", "opencv-python",
+    "Pillow", "pdf2image", "plotly", "requests",
+]
 
 
 def _tesseract_status() -> tuple[bool, str]:
@@ -21,39 +23,38 @@ def _tesseract_status() -> tuple[bool, str]:
     try:
         return True, str(pytesseract.get_tesseract_version())
     except Exception:
-        return False, "Not found. Install Tesseract and set TESSERACT_CMD in .env"
+        return False, "Not found — install Tesseract and set TESSERACT_CMD in .env"
 
 
 def render_system_status() -> None:
-    st.subheader("System status")
-
     ok, detail = _tesseract_status()
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Python", sys.version.split()[0])
-    c2.metric("Database", "Connected")
-    c3.metric("Tesseract", "Ready" if ok else "Missing")
+    st.markdown(
+        f"**Python** {sys.version.split()[0]} · "
+        f"**Mode** {'public demo' if settings.PUBLIC_DEMO else 'private (SQLite)'} · "
+        f"**Tesseract** {'ready' if ok else 'missing'}"
+    )
     if ok:
         st.caption(f"Tesseract version: {detail}")
     else:
         st.warning(detail)
 
-    st.markdown("**Database tables**")
-    with session_scope() as s:
+    with session_scope() as session:
         counts = {
-            "receipts": s.scalar(select(func.count()).select_from(Receipt)),
-            "purchase_items": s.scalar(select(func.count()).select_from(PurchaseItem)),
-            "products": s.scalar(select(func.count()).select_from(Product)),
-            "cpi_data": s.scalar(select(func.count()).select_from(CPIData)),
+            "receipts": session.scalar(select(func.count()).select_from(Receipt)),
+            "purchase_items": session.scalar(select(func.count()).select_from(PurchaseItem)),
+            "products": session.scalar(select(func.count()).select_from(Product)),
+            "cpi_data": session.scalar(select(func.count()).select_from(CPIData)),
         }
-    st.dataframe(pd.DataFrame({"table": list(counts.keys()), "rows": list(counts.values())}),
-                 hide_index=True, use_container_width=True)
+    st.dataframe(
+        pd.DataFrame({"table": list(counts), "rows": list(counts.values())}),
+        hide_index=True, use_container_width=True,
+    )
     st.caption(f"Database file: {settings.DATA_DIR / 'inflationlens.db'}")
 
-    st.markdown("**Installed packages**")
     rows = []
-    for pkg in PACKAGES:
+    for package in PACKAGES:
         try:
-            rows.append({"package": pkg, "version": version(pkg)})
+            rows.append({"package": package, "version": version(package)})
         except PackageNotFoundError:
-            rows.append({"package": pkg, "version": "NOT INSTALLED"})
+            rows.append({"package": package, "version": "not installed"})
     st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
