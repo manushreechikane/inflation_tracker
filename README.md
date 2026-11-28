@@ -55,7 +55,9 @@ lines in by hand.
 `PUBLIC_DEMO=true` (the default) is the portfolio/demo mode:
 
 - the app opens on a seeded nine-month grocery basket, so there is something to look at
-- uploaded receipts are OCR'd in memory and stored only in `st.session_state`
+- every visitor gets a short `Guest` handle in the `?u=` query string and **their own copy**
+  of that basket, so several people can use one deployment without seeing each other's
+  receipts; uploaded receipts are OCR'd in memory and kept in that workspace only
 - nothing is written to the database, and CPI imports are disabled (the CPI screen uses a
   clearly-labelled **illustrative** series so the comparison still works)
 
@@ -66,8 +68,12 @@ nine months of sample receipts from the Data screen, or from the shell:
 python -m modules.data_management.seed
 ```
 
-Do not ship a multi-user deployment with demo mode off until per-user isolation exists — one
-SQLite file means one shared basket for everybody.
+The demo workspaces are capped at 128 live baskets per process (least recently used is
+evicted) and are held in memory, so they reset when the server restarts. The handle is an
+address, not authentication: it keeps visitors apart, it does not protect anything.
+
+With demo mode off, one SQLite file means one shared basket, so treat that configuration as a
+single-household install rather than a hosted service.
 
 ## How it fits together
 

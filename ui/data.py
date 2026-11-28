@@ -1,11 +1,18 @@
 """One data access layer for both modes.
 
-Public demo mode keeps receipts in ``st.session_state`` (seeded with a realistic
-basket so the app is never empty). Private mode uses SQLite. Both hand back the
-same tidy history frame, so every page is written once.
+Public demo mode keeps receipts in a per-visitor workspace: each visitor gets a
+short handle (carried in the ``?u=`` query string) and their own seeded copy of
+the sample basket, so two people on the same deployment never see each other's
+receipts. Private mode uses SQLite. Both hand back the same tidy history frame,
+so every page is written once.
 """
 from __future__ import annotations
 
+import copy
+import re
+import secrets
+import threading
+from collections import OrderedDict
 from datetime import date
 
 import pandas as pd
@@ -45,19 +52,83 @@ def mode_label() -> str:
 # Receipts
 # --------------------------------------------------------------------------- #
 
+MAX_WORKSPACES = 128
+_TOKEN = re.compile(r"^[0-9a-f]{6,12}$")
+
+# One basket per visitor handle, newest used last so the oldest can be evicted.
+# Demo receipts are a few hundred rows at most, so a bounded map is plenty.
+_WORKSPACES: "OrderedDict[str, list[dict]]" = OrderedDict()
+_WORKSPACE_LOCK = threading.RLock()
+
+
 @st.cache_data(show_spinner=False)
 def _seed_receipts() -> list[dict]:
+    """The sample basket. Cached once, copied per workspace."""
     return demo_receipts()
 
 
+def _new_workspace() -> list[dict]:
+    return copy.deepcopy(_seed_receipts())
+
+
+def visitor_id() -> str:
+    """A short, random handle for this visitor's workspace.
+
+    Kept in the address bar so a reload lands back in the same basket. It is an
+    address, not a login: the data behind it is sample data.
+    """
+    known = st.session_state.get("visitor_id")
+    if known:
+        return str(known)
+
+    token = ""
+    try:
+        raw = st.query_params.get("u")
+        token = (raw[0] if isinstance(raw, list) else raw) or ""
+        token = str(token).strip().lower()
+    except Exception:  # no query params available: stay session-scoped
+        token = ""
+
+    if not _TOKEN.match(token):
+        token = secrets.token_hex(4)
+        try:
+            st.query_params["u"] = token
+        except Exception:
+            pass
+
+    st.session_state["visitor_id"] = token
+    return token
+
+
+def visitor_label() -> str:
+    return f"Guest {visitor_id()[:4].upper()}"
+
+
+def _workspace() -> list[dict]:
+    key = visitor_id()
+    with _WORKSPACE_LOCK:
+        records = _WORKSPACES.get(key)
+        if records is None:
+            records = _new_workspace()
+            _WORKSPACES[key] = records
+            while len(_WORKSPACES) > MAX_WORKSPACES:
+                _WORKSPACES.popitem(last=False)
+        else:
+            _WORKSPACES.move_to_end(key)
+    return records
+
+
 def receipts() -> list[dict]:
-    if "demo_receipts" not in st.session_state:
-        st.session_state["demo_receipts"] = _seed_receipts()
-    return st.session_state["demo_receipts"]
+    if not is_demo():
+        raise RuntimeError("SQLite mode reads through history() and receipt_table()")
+    return _workspace()
 
 
 def reset_demo() -> None:
-    st.session_state["demo_receipts"] = _seed_receipts()
+    key = visitor_id()
+    with _WORKSPACE_LOCK:
+        _WORKSPACES[key] = _new_workspace()
+        _WORKSPACES.move_to_end(key)
 
 
 def _next_demo_id() -> int:
@@ -79,15 +150,16 @@ def save_receipt(
         raise ValueError("A receipt needs at least one item")
 
     if is_demo():
-        receipt_id = _next_demo_id()
-        receipts().append({
-            "receipt_id": receipt_id,
-            "store_name": store_name or "Receipt",
-            "purchase_date": purchase_date,
-            "receipt_total": round(receipt_total, 2),
-            "items": items,
-            "seeded": False,
-        })
+        with _WORKSPACE_LOCK:
+            receipt_id = _next_demo_id()
+            receipts().append({
+                "receipt_id": receipt_id,
+                "store_name": store_name or "Receipt",
+                "purchase_date": purchase_date,
+                "receipt_total": round(receipt_total, 2),
+                "items": items,
+                "seeded": False,
+            })
         return str(receipt_id)
 
     from pathlib import Path  # local import keeps startup light
@@ -180,12 +252,14 @@ def receipt_table() -> pd.DataFrame:
 
 def delete_receipt(receipt_id: int) -> bool:
     if is_demo():
-        before = len(receipts())
-        st.session_state["demo_receipts"] = [
-            receipt for receipt in receipts()
-            if int(receipt.get("receipt_id", -1)) != int(receipt_id)
-        ]
-        return len(receipts()) < before
+        with _WORKSPACE_LOCK:
+            records = receipts()
+            before = len(records)
+            records[:] = [
+                receipt for receipt in records
+                if int(receipt.get("receipt_id", -1)) != int(receipt_id)
+            ]
+            return len(records) < before
     with session_scope() as session:
         return _delete_receipt(session, int(receipt_id))
 

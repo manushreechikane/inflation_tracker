@@ -78,6 +78,40 @@ a { color: var(--rust) !important; }
 hr { border-color: var(--line); }
 ::selection { background: var(--lilac); color: var(--ink); }
 
+/* ---------------- motion ---------------- */
+@keyframes il-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes il-pop {
+  0% { opacity: 0; transform: translateY(16px) scale(0.98); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes il-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes il-draw {
+  from { stroke-dashoffset: 240; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes il-tilt {
+  0%, 100% { rotate: -7deg; }
+  50% { rotate: 1.5deg; }
+}
+@keyframes il-bob {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-14px, 16px, 0) scale(1.06); }
+}
+@keyframes il-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(111, 127, 82, 0.5); }
+  50% { box-shadow: 0 0 0 4px rgba(111, 127, 82, 0); }
+}
+@keyframes il-nudge {
+  0%, 93%, 100% { transform: none; }
+  96% { transform: translateY(-2px); }
+}
+
 /* ---------------- sidebar ---------------- */
 [data-testid="stSidebar"] {
   background: var(--sand) !important;
@@ -107,6 +141,15 @@ hr { border-color: var(--line); }
   text-transform: uppercase; color: var(--ink); background: var(--lilac);
   border-radius: 999px; padding: 0.2rem 0.6rem;
 }
+.il-mode:not(.il-mode--guest)::before {
+  content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 0.38rem;
+  border-radius: 50%; background: var(--sage); vertical-align: 1px;
+  animation: il-pulse 2.6s ease-in-out infinite;
+}
+.il-mode--guest {
+  background: transparent; border: 1px solid var(--line); color: var(--muted);
+  margin-left: 0.25rem;
+}
 .il-side-label {
   font-size: 0.64rem; letter-spacing: 0.18em; text-transform: uppercase;
   color: var(--muted); margin: 1.1rem 0 0.45rem;
@@ -126,6 +169,13 @@ hr { border-color: var(--line); }
 }
 .stButton button:hover, .stDownloadButton button:hover {
   border-color: var(--ink); background: rgba(255,255,255,0.7); color: var(--ink);
+  transform: translateY(-1px); box-shadow: 0 6px 16px rgba(47,42,32,0.10);
+}
+.stButton button:active, .stDownloadButton button:active, .stFormSubmitButton button:active {
+  transform: translateY(0) scale(0.985);
+}
+.st-key-navlist button[kind="primary"] {
+  animation: il-pop 320ms cubic-bezier(.2,.75,.25,1) both;
 }
 [data-testid="stBaseButton-primary"], .stButton button[kind="primary"] {
   background: var(--rust) !important; border-color: var(--rust) !important;
@@ -175,10 +225,12 @@ hr { border-color: var(--line); }
   position: relative; overflow: hidden;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 2.1rem 2.3rem 2rem; margin: 1.1rem 0 1.3rem;
+  animation: il-rise 620ms cubic-bezier(.2,.75,.25,1) both;
 }
 .il-hero::before {
   content: ""; position: absolute; right: -70px; top: -110px; width: 330px; height: 330px;
   border-radius: 50%; background: var(--lilac-soft); opacity: 0.8;
+  animation: il-bob 16s ease-in-out infinite;
 }
 .il-hero-copy { position: relative; z-index: 1; max-width: 34rem; }
 .il-kicker {
@@ -190,16 +242,21 @@ hr { border-color: var(--line); }
   font-variation-settings: "SOFT" 90, "WONK" 1, "opsz" 144;
   font-weight: 700; font-size: clamp(3.4rem, 7vw, 5.4rem); line-height: 0.86;
   letter-spacing: -0.04em; color: var(--rust); display: block;
+  animation: il-pop 680ms cubic-bezier(.2,.75,.25,1) both;
 }
 .il-unit { font-size: 0.34em; margin-left: 0.14em; color: var(--muted); font-weight: 500; }
 .il-squiggle { display: block; margin: 0.75rem 0 0.85rem; }
+.il-squiggle path {
+  stroke-dasharray: 240; animation: il-draw 900ms 180ms ease both;
+}
 .il-hero-note { color: var(--ink); font-size: 0.98rem; line-height: 1.5; max-width: 26rem; }
 .il-hero-sub { margin-top: 0.6rem; color: var(--muted); font-size: 0.92rem; }
 .il-hero-sub b { color: var(--ink); font-weight: 600; }
 
 .il-sticker {
-  position: absolute; right: 2.4rem; top: 50%; transform: translateY(-50%) rotate(-7deg);
-  width: 142px; height: 142px; z-index: 2;
+  position: absolute; right: 2.4rem; top: 50%; transform: translateY(-50%);
+  width: 142px; height: 142px; z-index: 2; rotate: -7deg;
+  animation: il-tilt 11s ease-in-out infinite;
 }
 @media (max-width: 780px) { .il-sticker { display: none; } }
 
@@ -209,7 +266,15 @@ hr { border-color: var(--line); }
   background: var(--lilac-soft); border-radius: var(--radius);
   padding: 0.3rem 0.5rem; margin: 0 0 1.7rem;
 }
-.il-kpi { padding: 1.15rem 1.35rem; border-right: 1px solid rgba(47,42,32,0.14); }
+.il-kpi {
+  padding: 1.15rem 1.35rem; border-right: 1px solid rgba(47,42,32,0.14);
+  animation: il-rise 520ms cubic-bezier(.2,.75,.25,1) both;
+  transition: background 180ms ease;
+}
+.il-kpi:hover { background: rgba(255,253,248,0.45); }
+.il-kpi:nth-child(2) { animation-delay: 70ms; }
+.il-kpi:nth-child(3) { animation-delay: 140ms; }
+.il-kpi:nth-child(4) { animation-delay: 210ms; }
 .il-kpi:last-child { border-right: 0; }
 .il-kpi-label {
   font-size: 0.64rem; letter-spacing: 0.14em; text-transform: uppercase; color: #6B6355;
@@ -231,6 +296,7 @@ hr { border-color: var(--line); }
 .il-section {
   display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap;
   margin: 2.1rem 0 0.35rem;
+  animation: il-rise 440ms cubic-bezier(.2,.75,.25,1) both;
 }
 .il-section-title {
   font-family: 'Fraunces', Georgia, serif;
@@ -238,7 +304,10 @@ hr { border-color: var(--line); }
   font-weight: 600; font-size: 1.32rem; letter-spacing: -0.015em; color: var(--ink);
 }
 .il-section-kicker { font-size: 0.76rem; color: var(--muted); }
-.il-rule { height: 1px; background: var(--line); margin: 0.5rem 0 1rem; }
+.il-rule {
+  height: 1px; background: var(--line); margin: 0.5rem 0 1rem;
+  transform-origin: left center; animation: il-grow 620ms cubic-bezier(.2,.75,.25,1) both;
+}
 
 /* ---------------- chips, notes, alerts ---------------- */
 .il-chip {
@@ -249,7 +318,10 @@ hr { border-color: var(--line); }
 .il-chip--up { color: var(--rust); background: #FBEDE4; border-color: #EBC9B6; }
 .il-chip--down { color: var(--sage); background: #EDF1E4; border-color: #CBD3B4; }
 .il-chip--flat { color: var(--muted); }
-.il-chip--sample { color: var(--ink); background: var(--lilac); border-color: var(--lilac); }
+.il-chip--sample {
+  color: var(--ink); background: var(--lilac); border-color: var(--lilac);
+  animation: il-nudge 6s ease-in-out infinite;
+}
 
 .il-note { color: var(--muted); font-size: 0.84rem; line-height: 1.55; }
 .il-note b { color: var(--ink); }
@@ -263,6 +335,7 @@ hr { border-color: var(--line); }
   border: 1px solid #EBC9B6; border-left: 4px solid var(--rust);
   background: #FBEDE4; border-radius: 0 18px 18px 0;
   padding: 0.9rem 1.1rem; margin: 0.7rem 0;
+  animation: il-rise 480ms cubic-bezier(.2,.75,.25,1) both;
 }
 .il-alert-title {
   font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 1rem; color: var(--ink);
@@ -273,6 +346,7 @@ hr { border-color: var(--line); }
   border: 1px dashed #D8CBB2; border-radius: 20px; padding: 2.2rem 1.5rem;
   text-align: center; color: var(--muted); font-size: 0.92rem;
   background: rgba(255,253,248,0.6);
+  animation: il-rise 480ms cubic-bezier(.2,.75,.25,1) both;
 }
 
 /* ---------------- numbered steps ---------------- */
@@ -282,7 +356,14 @@ hr { border-color: var(--line); }
 .il-step {
   background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
   padding: 1.2rem 1.2rem 1.3rem;
+  animation: il-rise 540ms cubic-bezier(.2,.75,.25,1) both;
+  transition: transform 180ms ease, box-shadow 180ms ease;
 }
+.il-step:hover { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(47,42,32,0.09); }
+.il-step:nth-child(2) { animation-delay: 80ms; }
+.il-step:nth-child(3) { animation-delay: 160ms; }
+.il-step-n { transition: background 180ms ease, color 180ms ease; }
+.il-step:hover .il-step-n { background: var(--rust); color: #FFF4EA; }
 .il-step-n {
   display: inline-flex; align-items: center; justify-content: center;
   width: 1.9rem; height: 1.9rem; border-radius: 999px; background: var(--lilac);
@@ -300,10 +381,17 @@ hr { border-color: var(--line); }
 [data-testid="stPlotlyChart"] {
   background: var(--panel); border: 1px solid var(--line); border-radius: 22px;
   padding: 0.4rem 0.5rem; overflow: hidden;
+  animation: il-rise 560ms cubic-bezier(.2,.75,.25,1) both;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+[data-testid="stPlotlyChart"]:hover {
+  transform: translateY(-3px); box-shadow: 0 12px 28px rgba(47,42,32,0.10);
 }
 [data-testid="stDataFrame"], [data-testid="stDataEditor"] {
   border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+  animation: il-rise 520ms cubic-bezier(.2,.75,.25,1) both;
 }
+[data-testid="stAlert"] { animation: il-rise 420ms ease both; }
 [data-testid="stExpander"] details {
   border: 1px solid var(--line); border-radius: 16px; background: rgba(255,253,248,0.6);
 }
@@ -345,6 +433,14 @@ div[data-testid="stRadio"] label p { font-size: 0.86rem; margin: 0 !important; c
 .il-foot {
   border-top: 1px solid var(--line); margin-top: 3.5rem; padding-top: 0.9rem;
   color: var(--muted); font-size: 0.76rem; letter-spacing: 0.01em;
+  animation: il-rise 520ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 /* mobile control bar: hidden on desktop */
@@ -451,15 +547,19 @@ def month_label(period: str) -> str:
         return str(period)
 
 
-def brand(mode_label: str) -> None:
-    """Sidebar masthead."""
+def brand(mode_label: str, visitor_label: str = "") -> None:
+    """Sidebar masthead: mode chip, plus this visitor's workspace handle."""
+    guest = (
+        f'<span class="il-mode il-mode--guest">{esc(visitor_label)}</span>'
+        if visitor_label else ""
+    )
     st.markdown(
         _blk(f"""
         <div class="il-brand">
           <div class="il-wordmark">Inflation<em>Lens</em></div>
           <div class="il-tagline">Your groceries. Your prices.
             Your real inflation.</div>
-          <div class="il-mode">{esc(mode_label)}</div>
+          <div><span class="il-mode">{esc(mode_label)}</span>{guest}</div>
         </div>
         """),
         unsafe_allow_html=True,
@@ -474,9 +574,9 @@ def side_foot(markup: str) -> None:
     st.markdown(f'<div class="il-side-foot">{markup}</div>', unsafe_allow_html=True)
 
 
-def masthead(mode_label: str) -> None:
+def masthead(mode_label: str, visitor_label: str = "") -> None:
     """Kept for compatibility; the masthead now lives in the sidebar."""
-    brand(mode_label)
+    brand(mode_label, visitor_label)
 
 
 def section(title: str, kicker: str = "") -> None:

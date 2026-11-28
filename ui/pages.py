@@ -199,8 +199,9 @@ def page_scan() -> None:
     theme.section("Add a receipt", "photo in · prices out")
     if data.is_demo():
         theme.note(
-            "Demo mode: a receipt you add is held in this session only. It is never written "
-            "to the shared database, and the sample basket is reloaded on reset."
+            "Demo mode: this is <b>your</b> copy of the sample basket. A receipt you add "
+            "stays in your own workspace — never in someone else's — and is still here when "
+            "you come back to this link."
         )
 
     source = st.radio(
@@ -646,15 +647,16 @@ def page_data() -> None:
         theme.note(f"{len(frame)} verified line items.")
 
     if data.is_demo():
-        theme.section("Demo data", "seeded, resettable")
+        theme.section("Your workspace", "seeded, private, resettable")
         theme.note(
-            "This deployment runs in demo mode. Receipts you add live in this session only; "
-            "the shared database is never written to. The seeded basket is here so the app "
-            "is never empty."
+            f"You are <b>{theme.esc(data.visitor_label())}</b>. The sample basket was copied "
+            "for this workspace, so the receipts you add never appear for another visitor."
+            " Keep the <code>?u=…</code> in the address bar and your basket is still here "
+            "when you return."
         )
-        if st.button("Reset demo data", key="reset_demo"):
+        if st.button("Reset my workspace", key="reset_demo"):
             data.reset_demo()
-            flash("Demo data reset.", "Back to the seeded basket.")
+            flash("Workspace reset.", "Back to the seeded sample basket.")
             st.rerun()
     else:
         theme.section("Seeded basket", "optional")

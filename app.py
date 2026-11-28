@@ -32,7 +32,7 @@ def _sidebar() -> None:
     st.session_state.setdefault("months", 12)
 
     with st.sidebar:
-        theme.brand(data.mode_label())
+        theme.brand(data.mode_label(), data.visitor_label())
 
         theme.side_label("Ledger")
         with st.container(key="navlist"):
@@ -56,8 +56,8 @@ def _sidebar() -> None:
                         st.rerun()
 
         theme.side_foot(
-            "Built from receipts, not averages.<br>"
-            "Nine months of sample receipts are loaded."
+            f"<b>{theme.esc(data.visitor_label())}</b> — your own workspace.<br>"
+            "Receipts you add are never visible to another visitor."
         )
 
 
