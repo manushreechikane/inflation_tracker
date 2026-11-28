@@ -18,6 +18,40 @@ class Base(DeclarativeBase):
     pass
 
 
+class AppUser(Base):
+    """A person who signs in. Passwords are salted PBKDF2, never stored raw."""
+    __tablename__ = "app_users"
+
+    user_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(80))
+    password_hash: Mapped[str] = mapped_column(String(128))
+    password_salt: Mapped[str] = mapped_column(String(64))
+    avatar: Mapped[str | None] = mapped_column(Text)  # small data URI, resized on upload
+    country: Mapped[str] = mapped_column(String(2), default="IN")
+    currency: Mapped[str] = mapped_column(String(3), default="INR")
+    monthly_budget: Mapped[float | None] = mapped_column(Float)
+    household_size: Mapped[int | None] = mapped_column(Integer, default=1)
+    goal: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
+class UserBasket(Base):
+    """One account's receipts, as a JSON basket.
+
+    Keeping the basket per account is what makes the app multi-user: two people
+    signing in to the same deployment never share a price history.
+    """
+    __tablename__ = "user_baskets"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("app_users.user_id", ondelete="CASCADE"), primary_key=True
+    )
+    payload: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now, onupdate=_now)
+
+
 class Receipt(Base):
     __tablename__ = "receipts"
 

@@ -443,24 +443,122 @@ div[data-testid="stRadio"] label p { font-size: 0.86rem; margin: 0 !important; c
   }
 }
 
+/* ---------------- account, auth, profile, chat ---------------- */
+.il-account { display: flex; gap: 0.7rem; align-items: center; }
+.il-avatar {
+  border-radius: 50%; object-fit: cover; border: 1px solid var(--line);
+  background: var(--lilac-soft); flex: 0 0 auto;
+}
+.il-avatar--initials {
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', Georgia, serif; font-weight: 700; color: var(--ink);
+}
+.il-account-copy { min-width: 0; }
+.il-account-name {
+  font-family: 'Fraunces', Georgia, serif; font-variation-settings: "SOFT" 70, "WONK" 1;
+  font-size: 1.04rem; font-weight: 600; line-height: 1.15; color: var(--ink);
+}
+.il-account-mail {
+  font-size: 0.7rem; color: var(--muted); max-width: 10.5rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.il-account-chips { margin-top: 0.65rem; }
+.il-account-chips .il-mode { margin-top: 0.25rem; }
+
+.il-auth-aside {
+  position: relative; overflow: hidden; background: var(--panel);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 2.2rem 2rem; min-height: 30rem;
+  animation: il-rise 620ms cubic-bezier(.2,.75,.25,1) both;
+}
+.il-auth-aside::before {
+  content: ""; position: absolute; right: -90px; bottom: -80px; width: 300px; height: 300px;
+  border-radius: 50%; background: var(--lilac-soft); opacity: 0.75;
+  animation: il-bob 17s ease-in-out infinite;
+}
+.il-auth-line {
+  font-family: 'Fraunces', Georgia, serif;
+  font-variation-settings: "SOFT" 80, "WONK" 1, "opsz" 100;
+  font-size: 1.28rem; line-height: 1.3; margin: 0.75rem 0 1.5rem; max-width: 17rem;
+}
+.il-auth-points {
+  display: grid; gap: 0.85rem; font-size: 0.86rem; line-height: 1.55;
+  color: var(--muted); max-width: 21rem; position: relative; z-index: 1;
+}
+.il-auth-points b { color: var(--ink); font-weight: 600; }
+.il-auth-aside .il-sticker {
+  right: 20px; bottom: 18px; top: auto; transform: none; width: 118px; height: 118px;
+  opacity: 0.95;
+}
+@media (max-width: 780px) { .il-auth-aside { min-height: 0; padding: 1.5rem 1.3rem; } }
+
+.st-key-authcard {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1.5rem 1.5rem 1.1rem;
+  animation: il-rise 680ms cubic-bezier(.2,.75,.25,1) both;
+}
+.st-key-authcard .stButton button { width: 100%; }
+
+.st-key-profile_card, .st-key-profile_form_card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 1.5rem 1.5rem 1.2rem;
+  animation: il-rise 480ms cubic-bezier(.2,.75,.25,1) both;
+}
+.il-profile-name {
+  font-family: 'Fraunces', Georgia, serif;
+  font-variation-settings: "SOFT" 80, "WONK" 1;
+  font-size: 1.22rem; font-weight: 600; margin-top: 0.85rem; line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.il-profile-mail {
+  color: var(--muted); font-size: 0.74rem; margin-bottom: 1.1rem;
+  overflow-wrap: anywhere;
+}
+.il-avatar-wrap { text-align: center; margin-top: 0.2rem; }
+.il-avatar-wrap .il-avatar { display: inline-flex; }
+.il-form-title {
+  font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 1.12rem;
+  margin-bottom: 0.7rem;
+}
+
+[data-testid="stChatMessage"] { background: transparent; padding: 0.3rem 0; }
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+  padding: 0.85rem 1.1rem; animation: il-rise 320ms ease both;
+}
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] p { margin-bottom: 0.4rem; }
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] p:last-child { margin-bottom: 0; }
+[data-testid="stChatInput"] {
+  background: var(--panel) !important; border: 1px solid var(--line) !important;
+  border-radius: 999px !important; box-shadow: 0 6px 18px rgba(47,42,32,0.06);
+}
+[data-testid="stChatInput"] textarea { color: var(--ink) !important; }
+[data-testid="stBottom"] > div { background: var(--paper) !important; }
+
 /* mobile control bar: hidden on desktop */
 .st-key-mobilenav { display: none; }
 
 /* ---------------- small screens ---------------- */
 @media (max-width: 780px) {
   .st-key-mobilenav { display: block; margin: 0.1rem 0 0.8rem; }
-  .st-key-mnav_pages, .st-key-mnav_windows {
-    display: flex !important; flex-direction: row !important; gap: 0.3rem !important;
-    overflow-x: auto; padding-bottom: 0.25rem; scrollbar-width: none;
+  .st-key-mobilenav [data-testid="stPills"] > div[role="group"],
+  .st-key-mobilenav [role="group"] {
+    flex-wrap: wrap !important; gap: 0.3rem !important; overflow: visible !important;
   }
-  .st-key-mnav_windows { margin-top: 0.1rem; }
-  .st-key-mobilenav .stButton button {
-    width: auto !important; white-space: nowrap; padding: 0.3rem 0.75rem !important;
-    font-size: 0.78rem; border-radius: 999px !important;
+  .st-key-mobilenav [data-testid="stPills"] button {
+    border-radius: 999px !important; border: 1px solid var(--line) !important;
+    background: transparent !important; color: var(--ink) !important;
+    font-size: 0.78rem !important; line-height: 1.1 !important;
+    padding: 0.28rem 0.75rem !important; min-height: 0 !important;
   }
-  .st-key-mobilenav .stButton button p { font-size: 0.78rem !important; }
-  .st-key-mobilenav .stButton button[kind="secondary"] {
-    border-color: var(--line) !important; color: var(--ink) !important;
+  .st-key-mobilenav [data-testid="stPills"] button[kind="pillsActive"],
+  .st-key-mobilenav [data-testid="stPills"] button[aria-checked="true"],
+  .st-key-mobilenav [data-testid="stPills"] button[aria-selected="true"] {
+    background: var(--rust) !important; border-color: var(--rust) !important;
+    color: #FFF4EA !important;
+  }
+  .st-key-mobilenav [data-testid="stPills"] button p {
+    font-size: 0.78rem !important; margin: 0 !important;
   }
   [data-testid="stAppViewBlockContainer"], .block-container {
     padding: 0.6rem 1.1rem 3rem;
@@ -497,6 +595,9 @@ def esc(value) -> str:
 
 
 def currency_symbol(currency: str | None = None) -> str:
+    if currency is None:
+        user = st.session_state.get("user") or {}
+        currency = user.get("currency")
     return SUPPORTED_CURRENCIES.get(currency or settings.DEFAULT_CURRENCY, "")
 
 
@@ -547,19 +648,44 @@ def month_label(period: str) -> str:
         return str(period)
 
 
-def brand(mode_label: str, visitor_label: str = "") -> None:
-    """Sidebar masthead: mode chip, plus this visitor's workspace handle."""
-    guest = (
-        f'<span class="il-mode il-mode--guest">{esc(visitor_label)}</span>'
-        if visitor_label else ""
+def avatar(user: dict | None, size: int = 44) -> str:
+    """A round picture, or the person's initials in the same shape."""
+    if not user:
+        return ""
+    name = esc(user.get("name") or "?")
+    source = user.get("avatar")
+    style = f"width:{size}px; height:{size}px;"
+    if source:
+        return f'<img class="il-avatar" src="{source}" alt="{name}" style="{style}">'
+    initials = "".join(part[0] for part in str(user.get("name") or "?").split()[:2])
+    return (
+        f'<div class="il-avatar il-avatar--initials" style="{style} '
+        f'font-size:{max(12, size // 3)}px">{esc(initials.upper() or "?")}</div>'
+    )
+
+
+def account(user: dict, mode_label: str) -> None:
+    """Sidebar masthead: the signed-in person, then their mode and budget."""
+    budget = user.get("monthly_budget")
+    budget_chip = (
+        f'<span class="il-mode il-mode--guest">{money(budget, decimals=0, currency=user.get("currency"))}'
+        f' budget</span>'
+        if budget else
+        '<span class="il-mode il-mode--guest">no budget set</span>'
     )
     st.markdown(
         _blk(f"""
         <div class="il-brand">
-          <div class="il-wordmark">Inflation<em>Lens</em></div>
-          <div class="il-tagline">Your groceries. Your prices.
-            Your real inflation.</div>
-          <div><span class="il-mode">{esc(mode_label)}</span>{guest}</div>
+          <div class="il-account">
+            {avatar(user, 46)}
+            <div class="il-account-copy">
+              <div class="il-account-name">{esc(user.get('name'))}</div>
+              <div class="il-account-mail">{esc(user.get('email'))}</div>
+            </div>
+          </div>
+          <div class="il-account-chips">
+            <span class="il-mode">{esc(mode_label)}</span>{budget_chip}
+          </div>
         </div>
         """),
         unsafe_allow_html=True,
@@ -572,11 +698,6 @@ def side_label(text: str) -> None:
 
 def side_foot(markup: str) -> None:
     st.markdown(f'<div class="il-side-foot">{markup}</div>', unsafe_allow_html=True)
-
-
-def masthead(mode_label: str, visitor_label: str = "") -> None:
-    """Kept for compatibility; the masthead now lives in the sidebar."""
-    brand(mode_label, visitor_label)
 
 
 def section(title: str, kicker: str = "") -> None:
@@ -668,7 +789,7 @@ def empty(message: str, hint: str = "") -> None:
 
 def footer() -> None:
     st.markdown(
-        '<div class="il-foot">Personal price history kept on this machine. '
+        '<div class="il-foot">Price history kept with your account. '
         'Not financial advice; prices are what the receipts said.</div>',
         unsafe_allow_html=True,
     )

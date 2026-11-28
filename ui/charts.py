@@ -18,7 +18,7 @@ SERIF = "Fraunces, Georgia, serif"
 def _frame(fig: go.Figure, height: int = 320, legend: bool = False) -> go.Figure:
     fig.update_layout(
         height=height,
-        margin=dict(l=6, r=6, t=14, b=24),
+        margin=dict(l=10, r=18, t=14, b=30),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family=FONT, size=12, color=MUTED),
@@ -31,10 +31,16 @@ def _frame(fig: go.Figure, height: int = 320, legend: bool = False) -> go.Figure
     )
     fig.update_xaxes(showgrid=False, zeroline=False, linecolor=LINE,
                      ticks="outside", tickcolor="rgba(0,0,0,0)", ticklen=4,
-                     tickfont=dict(size=11))
+                     automargin=True, tickfont=dict(size=11), ticklabelposition="outside")
     fig.update_yaxes(showgrid=False, zeroline=False, linecolor="rgba(0,0,0,0)",
-                     tickfont=dict(size=11))
+                     automargin=True, tickfont=dict(size=11))
     return fig
+
+
+def _short(name: str, limit: int = 30) -> str:
+    """Keep long product names inside the chart instead of clipping them."""
+    text = str(name)
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
 def _end_label(fig: go.Figure, x, y, text: str, color: str) -> None:
@@ -87,7 +93,7 @@ def index_chart(personal: pd.DataFrame, official: pd.DataFrame | None = None,
     low, high = min(values), max(values)
     pad = max((high - low) * 0.22, 1.5)
     fig.update_yaxes(range=[low - pad, high + pad])
-    fig.update_xaxes(range=[-0.4, len(months) + 2.4])
+    fig.update_xaxes(range=[-0.4, len(months) + 2.2])
     return _frame(fig, height)
 
 
@@ -96,10 +102,11 @@ def movers_chart(movers: pd.DataFrame, height: int | None = None) -> go.Figure:
     fig = go.Figure()
     if movers is None or movers.empty:
         return _frame(fig, height or 300)
-    frame = movers.sort_values("change_pct", ascending=True).tail(9)
+    frame = movers.sort_values("change_pct", ascending=True).tail(8).copy()
+    frame["label"] = [_short(name) for name in frame["product"]]
     colors = [RUST if value > 0 else SAGE for value in frame["change_pct"]]
     fig.add_trace(go.Bar(
-        x=frame["change_pct"], y=frame["product"], orientation="h",
+        x=frame["change_pct"], y=frame["label"], orientation="h",
         marker=dict(color=colors, line=dict(width=0)),
         text=[f"{value:+.1f}%" for value in frame["change_pct"]],
         textposition="outside",
@@ -110,10 +117,10 @@ def movers_chart(movers: pd.DataFrame, height: int | None = None) -> go.Figure:
     peak = float(frame["change_pct"].abs().max() or 1)
     low = min(0.0, float(frame["change_pct"].min()))
     fig.update_xaxes(range=[low - peak * 0.05, peak * 1.32], showticklabels=False, showline=False)
-    fig.update_yaxes(tickfont=dict(size=11.5, color=INK))
-    height = height or max(220, 42 * len(frame) + 40)
+    fig.update_yaxes(tickfont=dict(size=11.5, color=INK), automargin=True)
+    height = height or max(220, 40 * len(frame) + 36)
     fig = _frame(fig, height)
-    fig.update_layout(hovermode="closest", margin=dict(l=6, r=12, t=6, b=6))
+    fig.update_layout(hovermode="closest", margin=dict(l=10, r=34, t=8, b=10))
     return fig
 
 
@@ -132,9 +139,11 @@ def spend_chart(monthly: pd.DataFrame, height: int = 220) -> go.Figure:
         hovertemplate="%{x}: %{y:,.0f}<extra></extra>",
         width=0.6,
     ))
-    fig.update_xaxes(showline=True, linecolor=LINE, tickangle=0)
+    fig.update_xaxes(showline=True, linecolor=LINE, tickangle=0, automargin=True)
     fig.update_yaxes(showticklabels=False)
-    return _frame(fig, height)
+    fig = _frame(fig, height)
+    fig.update_layout(margin=dict(l=10, r=14, t=10, b=34))
+    return fig
 
 
 def product_line(history: pd.DataFrame, height: int = 260) -> go.Figure:
@@ -151,7 +160,7 @@ def product_line(history: pd.DataFrame, height: int = 260) -> go.Figure:
         marker=dict(color=RUST, size=6, line=dict(color="#FFFDF8", width=1.5)),
         hovertemplate="%{x|%d %b %Y}<br>%{y:,.2f}<extra></extra>",
     ))
-    fig.update_xaxes(showline=True, linecolor=LINE)
+    fig.update_xaxes(showline=True, linecolor=LINE, automargin=True)
     fig.update_yaxes(rangemode="tozero")
     return _frame(fig, height)
 
@@ -172,8 +181,10 @@ def category_chart(breakdown: pd.DataFrame, height: int = 260) -> go.Figure:
         width=0.55,
     ))
     fig.update_xaxes(showticklabels=False)
-    fig.update_yaxes(tickfont=dict(size=11.5, color=INK))
-    return _frame(fig, height)
+    fig.update_yaxes(tickfont=dict(size=11.5, color=INK), automargin=True)
+    fig = _frame(fig, height)
+    fig.update_layout(margin=dict(l=10, r=34, t=8, b=10))
+    return fig
 
 
 CHART_CONFIG = {"displayModeBar": False, "scrollZoom": False}

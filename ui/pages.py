@@ -30,7 +30,7 @@ from modules.receipt_processing.receipt_processor import (
     parse_receipt_lines,
 )
 from modules.receipt_processing.sample_receipts import SAMPLE_NAMES, render_sample
-from ui import charts, data, theme
+from ui import charts, coach, data, profile, theme
 
 
 
@@ -154,16 +154,18 @@ def page_overview() -> None:
             "import real CPI on the Data screen to replace it."
         )
 
-    left, right = st.columns([1.35, 1], gap="large")
+    left, right = st.columns([1.3, 1], gap="large")
+    chart_height = 340
     with left:
         theme.section("What moved", "first vs. latest purchase")
         st.plotly_chart(
-            charts.movers_chart(inflation), use_container_width=True, config=charts.CHART_CONFIG
+            charts.movers_chart(inflation, height=chart_height),
+            use_container_width=True, config=charts.CHART_CONFIG,
         )
     with right:
         theme.section("Spend by month", "")
         st.plotly_chart(
-            charts.spend_chart(spend_by_month(history_frame)),
+            charts.spend_chart(spend_by_month(history_frame), height=chart_height),
             use_container_width=True, config=charts.CHART_CONFIG,
         )
         theme.note("Prices are what the receipts said; the mix of what you bought still moves this bar.")
@@ -199,9 +201,8 @@ def page_scan() -> None:
     theme.section("Add a receipt", "photo in · prices out")
     if data.is_demo():
         theme.note(
-            "Demo mode: this is <b>your</b> copy of the sample basket. A receipt you add "
-            "stays in your own workspace — never in someone else's — and is still here when "
-            "you come back to this link."
+            "Receipts are saved to <b>your account</b>, not to this browser, so your basket "
+            "follows you to any device you sign in from."
         )
 
     source = st.radio(
@@ -646,28 +647,16 @@ def page_data() -> None:
         )
         theme.note(f"{len(frame)} verified line items.")
 
-    if data.is_demo():
-        theme.section("Your workspace", "seeded, private, resettable")
-        theme.note(
-            f"You are <b>{theme.esc(data.visitor_label())}</b>. The sample basket was copied "
-            "for this workspace, so the receipts you add never appear for another visitor."
-            " Keep the <code>?u=…</code> in the address bar and your basket is still here "
-            "when you return."
-        )
-        if st.button("Reset my workspace", key="reset_demo"):
-            data.reset_demo()
-            flash("Workspace reset.", "Back to the seeded sample basket.")
-            st.rerun()
-    else:
-        theme.section("Seeded basket", "optional")
-        theme.note("Load nine months of sample receipts into SQLite to explore the app.")
-        if st.button("Seed the database", key="seed_db"):
-            try:
-                created = data.seed_local_database()
-                flash("Database seeded.", f"{created} receipts added.")
-                st.rerun()
-            except Exception as exc:
-                st.error(str(exc))
+    theme.section("Your basket", "sample receipts, resettable")
+    theme.note(
+        "A new account starts with nine months of sample receipts so the app is never "
+        "empty. Reloading the sample replaces your basket with the original one — anything "
+        "you added yourself goes with it."
+    )
+    if st.button("Reload the sample basket", key="reset_demo"):
+        data.reset_demo()
+        flash("Sample basket reloaded.", "Your own additions were cleared.")
+        st.rerun()
 
     theme.section("Official CPI", "import or fetch")
     country = st.selectbox(
@@ -733,6 +722,8 @@ PAGE_LABELS = {
     "scan": "Add a receipt",
     "basket": "My basket",
     "cpi": "vs. CPI",
+    "coach": "My plan",
+    "profile": "You",
     "data": "Data",
 }
 
@@ -741,5 +732,7 @@ PAGES = {
     "scan": page_scan,
     "basket": page_basket,
     "cpi": page_cpi,
+    "coach": coach.page_coach,
+    "profile": profile.page_profile,
     "data": page_data,
 }

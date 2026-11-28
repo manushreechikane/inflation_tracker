@@ -15,7 +15,12 @@ month so the two lines are actually comparable.
 | **Add a receipt** | Read a photo or PDF, correct the extracted lines, see what the OCR was unsure about, save. |
 | **My basket** | Every tracked product, shrinkflation alerts, store-to-store spread, receipt management. |
 | **vs. CPI** | Your index against an official series on one axis, plus the category gap. |
-| **Data** | CSV export, CPI import / BLS fetch, demo reset, diagnostics. |
+| **My plan** | A coach that turns the basket into a plan against your budget: what to cap, what to swap, what to stop assuming. |
+| **You** | Account and profile: picture, name, household, budget, currency, password, data export, deletion. |
+| **Data** | CSV export, CPI import / BLS fetch, sample-basket reload, diagnostics. |
+
+Signing in is part of the product, not a wrapper: each account keeps its own basket, profile
+and plan, so several people can use one deployment without seeing each other's prices.
 
 ### The parts that matter
 
@@ -50,44 +55,49 @@ Tesseract is required for OCR. On Windows set `TESSERACT_CMD` in `.env`; on Debi
 If Tesseract is missing the app still runs: the receipt screen says so and lets you type the
 lines in by hand.
 
-## Modes
+## Accounts
 
-`PUBLIC_DEMO=true` (the default) is the portfolio/demo mode:
+Every visit starts on a sign-in screen. An account has:
 
-- the app opens on a seeded nine-month grocery basket, so there is something to look at
-- every visitor gets a short `Guest` handle in the `?u=` query string and **their own copy**
-  of that basket, so several people can use one deployment without seeing each other's
-  receipts; uploaded receipts are OCR'd in memory and kept in that workspace only
-- nothing is written to the database, and CPI imports are disabled (the CPI screen uses a
-  clearly-labelled **illustrative** series so the comparison still works)
+- an email and password (PBKDF2-HMAC-SHA256, 210,000 iterations, a per-user salt; the plain
+  password is never stored, logged or emailed)
+- a profile: display name, picture, country, currency, monthly grocery budget, household size
+  and a one-line goal
+- **its own basket.** Receipts and the price history belong to the account, not the browser,
+  so two people on one deployment never share a basket and a basket follows you to another
+  device
+- a password change, a CSV export and account deletion (basket included)
 
-Set `PUBLIC_DEMO=false` in `.env` for a private local instance backed by SQLite. Seed it with
-nine months of sample receipts from the Data screen, or from the shell:
+A new account is seeded with nine months of sample receipts so the app is never empty. The
+sample basket can be reloaded from **Data**, and the "Look around with a sample account"
+button creates a throwaway account for a reviewer who does not want to sign up.
 
-```bash
-python -m modules.data_management.seed
-```
+Accounts, profiles and baskets live in one SQLite file (`data/inflationlens.db`). On a free
+container that file survives as long as the container does, so treat it as a demo store: there
+is no email verification and no password reset, and anyone with the link can create an
+account. It is authentication for a portfolio app, not for anything sensitive.
 
-The demo workspaces are capped at 128 live baskets per process (least recently used is
-evicted) and are held in memory, so they reset when the server restarts. The handle is an
-address, not authentication: it keeps visitors apart, it does not protect anything.
-
-With demo mode off, one SQLite file means one shared basket, so treat that configuration as a
-single-household install rather than a hosted service.
+`PUBLIC_DEMO=true` (the default) additionally disables CPI imports and serves the
+clearly-labelled **illustrative** CPI series, so the comparison still works offline. Set
+`PUBLIC_DEMO=false` in `.env` to import real CPI rows or fetch them from BLS (see below).
 
 ## How it fits together
 
 ```text
-app.py                    sidebar navigation, mobile pill bar, page dispatch
+app.py                    sign-in gate, sidebar navigation, mobile pill bar, dispatch
 ui/theme.py               the stylesheet and formatting helpers
 ui/charts.py              one sparse chart language (no grids, no legends)
-ui/data.py                the single data layer: demo session <-> SQLite
-ui/pages.py               the five screens
+ui/auth.py                sign in, sign up, sample account, session handling
+ui/data.py                the single data layer, scoped to the signed-in account
+ui/pages.py               the five price screens
+ui/profile.py             profile, budget, password, export, deletion
+ui/coach.py               the plan builder and its chat
 modules/receipt_processing/
   receipt_processor.py    OCR lines + confidence, money/date/pack parsing
   sample_receipts.py      rendered sample receipts for the demo
 modules/data_management/
-  models.py               receipts, products, aliases, items, CPI observations
+  accounts.py             accounts, PBKDF2 passwords, profiles, per-user baskets
+  models.py               accounts, baskets, receipts, products, aliases, CPI observations
   repository.py           product identity, alias learning, CPI upserts
   seed.py                 the nine-month demo basket
 modules/analytics/         tidy history frame -> change, index, shrinkflation, spread
@@ -102,8 +112,8 @@ receipt_id, purchase_date, product, product_id, category, brand,
 package_size, package_unit, quantity, unit_price, total_price, store_name
 ```
 
-The demo path builds it from `st.session_state`, the private path from SQL, and both then run
-through the same analytics. There is no second implementation to keep in sync.
+The account basket is read into that frame and run through the same analytics as any SQL
+path, so there is no second implementation to keep in sync.
 
 ## Official CPI
 

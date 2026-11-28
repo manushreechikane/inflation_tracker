@@ -1,18 +1,12 @@
-"""One data access layer for both modes.
+"""One data access layer, scoped to the signed-in account.
 
-Public demo mode keeps receipts in a per-visitor workspace: each visitor gets a
-short handle (carried in the ``?u=`` query string) and their own seeded copy of
-the sample basket, so two people on the same deployment never see each other's
-receipts. Private mode uses SQLite. Both hand back the same tidy history frame,
-so every page is written once.
+Every account keeps its own basket of receipts (seeded with a realistic sample
+so the app is never empty), stored next to the account itself. Two people using
+one deployment therefore never share a price history. The analytics package runs
+on the same tidy frame either way, so every page is written once.
 """
 from __future__ import annotations
 
-import copy
-import re
-import secrets
-import threading
-from collections import OrderedDict
 from datetime import date
 
 import pandas as pd
@@ -21,22 +15,10 @@ from sqlalchemy import func, select
 
 from config import settings
 from modules.analytics import analytics
+from modules.data_management.accounts import load_basket, save_basket
 from modules.data_management.database import session_scope
-from modules.data_management.models import (
-    CPIData,
-    Product,
-    PurchaseItem,
-    Receipt,
-)
-from modules.data_management.repository import delete_receipt as _delete_receipt
-from modules.data_management.repository import (
-    find_receipt_by_hash,
-    get_or_create_product,
-    rename_product as _rename_product,
-    set_product_category,
-)
+from modules.data_management.models import CPIData, Product
 from modules.data_management.seed import demo_receipts
-from modules.data_management.seed import seed_database as _seed_database
 from modules.external_data.cpi import sample_cpi_frame
 
 
@@ -45,90 +27,66 @@ def is_demo() -> bool:
 
 
 def mode_label() -> str:
-    return "Demo · sample basket" if is_demo() else "Local · SQLite"
+    return "Demo · sample basket" if is_demo() else "Local · your data"
+
+
+def _user_id() -> int | None:
+    user = st.session_state.get("user") or {}
+    try:
+        return int(user.get("user_id"))
+    except (TypeError, ValueError):
+        return None
+
+
+def _key(user_id: int) -> str:
+    return f"basket_{user_id}"
 
 
 # --------------------------------------------------------------------------- #
 # Receipts
 # --------------------------------------------------------------------------- #
 
-MAX_WORKSPACES = 128
-_TOKEN = re.compile(r"^[0-9a-f]{6,12}$")
-
-# One basket per visitor handle, newest used last so the oldest can be evicted.
-# Demo receipts are a few hundred rows at most, so a bounded map is plenty.
-_WORKSPACES: "OrderedDict[str, list[dict]]" = OrderedDict()
-_WORKSPACE_LOCK = threading.RLock()
-
-
-@st.cache_data(show_spinner=False)
-def _seed_receipts() -> list[dict]:
-    """The sample basket. Cached once, copied per workspace."""
-    return demo_receipts()
-
-
-def _new_workspace() -> list[dict]:
-    return copy.deepcopy(_seed_receipts())
-
-
-def visitor_id() -> str:
-    """A short, random handle for this visitor's workspace.
-
-    Kept in the address bar so a reload lands back in the same basket. It is an
-    address, not a login: the data behind it is sample data.
-    """
-    known = st.session_state.get("visitor_id")
-    if known:
-        return str(known)
-
-    token = ""
-    try:
-        raw = st.query_params.get("u")
-        token = (raw[0] if isinstance(raw, list) else raw) or ""
-        token = str(token).strip().lower()
-    except Exception:  # no query params available: stay session-scoped
-        token = ""
-
-    if not _TOKEN.match(token):
-        token = secrets.token_hex(4)
-        try:
-            st.query_params["u"] = token
-        except Exception:
-            pass
-
-    st.session_state["visitor_id"] = token
-    return token
-
-
-def visitor_label() -> str:
-    return f"Guest {visitor_id()[:4].upper()}"
-
-
-def _workspace() -> list[dict]:
-    key = visitor_id()
-    with _WORKSPACE_LOCK:
-        records = _WORKSPACES.get(key)
-        if records is None:
-            records = _new_workspace()
-            _WORKSPACES[key] = records
-            while len(_WORKSPACES) > MAX_WORKSPACES:
-                _WORKSPACES.popitem(last=False)
-        else:
-            _WORKSPACES.move_to_end(key)
-    return records
-
-
 def receipts() -> list[dict]:
-    if not is_demo():
-        raise RuntimeError("SQLite mode reads through history() and receipt_table()")
-    return _workspace()
+    """This account's receipts, loading (and seeding) from storage on first use."""
+    user_id = _user_id()
+    if user_id is None:
+        return []
+
+    key = _key(user_id)
+    if key not in st.session_state:
+        records = load_basket(user_id)
+        if records is None:
+            records = demo_receipts()
+            save_basket(user_id, records)
+        st.session_state[key] = records
+    return st.session_state[key]
+
+
+def _persist() -> None:
+    user_id = _user_id()
+    if user_id is not None:
+        save_basket(user_id, receipts())
+
+
+def seed_account_basket(user_id: int, force: bool = False) -> int:
+    """Give a fresh account the sample basket (or leave an existing one alone)."""
+    if force or load_basket(user_id) is None:
+        records = demo_receipts()
+        save_basket(user_id, records)
+        st.session_state[_key(user_id)] = records
+    return len(st.session_state.get(_key(user_id)) or [])
 
 
 def reset_demo() -> None:
-    key = visitor_id()
-    with _WORKSPACE_LOCK:
-        _WORKSPACES[key] = _new_workspace()
-        _WORKSPACES.move_to_end(key)
+    user_id = _user_id()
+    if user_id is None:
+        return
+    st.session_state[_key(user_id)] = demo_receipts()
+    _persist()
+
+
+def forget_basket(user_id: int) -> None:
+    st.session_state.pop(_key(user_id), None)
 
 
 def _next_demo_id() -> int:
@@ -145,123 +103,50 @@ def save_receipt(
     file_name: str | None = None,
     file_bytes: bytes | None = None,
 ) -> str:
-    """Persist a reviewed receipt. Returns the receipt id (string for the demo)."""
+    """Persist a reviewed receipt to this account's basket."""
     if not items:
         raise ValueError("A receipt needs at least one item")
+    if _user_id() is None:
+        raise ValueError("Sign in to save a receipt")
 
-    if is_demo():
-        with _WORKSPACE_LOCK:
-            receipt_id = _next_demo_id()
-            receipts().append({
-                "receipt_id": receipt_id,
-                "store_name": store_name or "Receipt",
-                "purchase_date": purchase_date,
-                "receipt_total": round(receipt_total, 2),
-                "items": items,
-                "seeded": False,
-            })
-        return str(receipt_id)
-
-    from pathlib import Path  # local import keeps startup light
-
-    from modules.receipt_processing.receipt_processor import save_upload, sha256_bytes
-
-    with session_scope() as session:
-        path: Path | None = None
-        digest = sha256_bytes(raw_text.encode() if raw_text else f"{store_name}{purchase_date}".encode())
-        if file_bytes:
-            path, digest = save_upload(file_name or "receipt.png", file_bytes)
-        if find_receipt_by_hash(session, digest):
-            raise ValueError("This receipt has already been saved")
-
-        receipt = Receipt(
-            store_name=store_name or None,
-            purchase_date=purchase_date,
-            receipt_total=round(receipt_total, 2),
-            currency=settings.DEFAULT_CURRENCY,
-            original_file_path=str(path) if path else "manual://entry",
-            file_hash=digest,
-            raw_ocr_text=raw_text,
-            processing_status="verified",
-        )
-        session.add(receipt)
-        session.flush()
-
-        for item in items:
-            product = get_or_create_product(
-                session,
-                item["product"],
-                brand=item.get("brand"),
-                package_size=item.get("package_size"),
-                package_unit=item.get("package_unit"),
-                category=item.get("category"),
-            )
-            session.add(PurchaseItem(
-                receipt_id=receipt.receipt_id,
-                product_id=product.product_id,
-                quantity=float(item.get("quantity") or 1),
-                package_size=item.get("package_size"),
-                unit=item.get("package_unit"),
-                total_price=float(item["total_price"]),
-                unit_price=float(item["unit_price"]),
-                verification_status="verified",
-                ocr_line_text=item.get("ocr_line_text"),
-                ocr_product_name=item["product"],
-                ocr_total_price=float(item["total_price"]),
-                ocr_confidence=item.get("ocr_confidence"),
-                user_corrected=bool(item.get("user_corrected", True)),
-            ))
-        return str(receipt.receipt_id)
+    receipt_id = _next_demo_id()
+    receipts().append({
+        "receipt_id": receipt_id,
+        "store_name": store_name or "Receipt",
+        "purchase_date": purchase_date,
+        "receipt_total": round(float(receipt_total), 2),
+        "items": items,
+        "seeded": False,
+    })
+    _persist()
+    return str(receipt_id)
 
 
 def receipt_table() -> pd.DataFrame:
     columns = ["Receipt", "Date", "Store", "Items", "Total"]
-    if is_demo():
-        rows = [{
-            "Receipt": int(receipt.get("receipt_id", index)),
-            "Date": pd.Timestamp(receipt["purchase_date"]),
-            "Store": receipt.get("store_name") or "—",
-            "Items": len(receipt.get("items", [])),
-            "Total": float(receipt.get("receipt_total") or 0),
-        } for index, receipt in enumerate(receipts(), start=1)]
-        if not rows:
-            return pd.DataFrame(columns=columns)
-        return pd.DataFrame(rows, columns=columns).sort_values("Date", ascending=False)
-
-    with session_scope() as session:
-        rows = session.execute(
-            select(
-                Receipt.receipt_id,
-                Receipt.purchase_date,
-                Receipt.store_name,
-                func.count(PurchaseItem.purchase_id),
-                Receipt.receipt_total,
-            )
-            .outerjoin(PurchaseItem, PurchaseItem.receipt_id == Receipt.receipt_id)
-            .group_by(Receipt.receipt_id)
-            .order_by(Receipt.purchase_date.desc())
-        ).all()
+    rows = [{
+        "Receipt": int(receipt.get("receipt_id", index)),
+        "Date": pd.Timestamp(receipt["purchase_date"]),
+        "Store": receipt.get("store_name") or "—",
+        "Items": len(receipt.get("items", [])),
+        "Total": float(receipt.get("receipt_total") or 0),
+    } for index, receipt in enumerate(receipts(), start=1)]
     if not rows:
         return pd.DataFrame(columns=columns)
-    return pd.DataFrame([
-        {"Receipt": row[0], "Date": pd.Timestamp(row[1]), "Store": row[2] or "—",
-         "Items": row[3], "Total": float(row[4] or 0)}
-        for row in rows
-    ], columns=columns)
+    return pd.DataFrame(rows, columns=columns).sort_values("Date", ascending=False)
 
 
 def delete_receipt(receipt_id: int) -> bool:
-    if is_demo():
-        with _WORKSPACE_LOCK:
-            records = receipts()
-            before = len(records)
-            records[:] = [
-                receipt for receipt in records
-                if int(receipt.get("receipt_id", -1)) != int(receipt_id)
-            ]
-            return len(records) < before
-    with session_scope() as session:
-        return _delete_receipt(session, int(receipt_id))
+    records = receipts()
+    before = len(records)
+    records[:] = [
+        receipt for receipt in records
+        if int(receipt.get("receipt_id", -1)) != int(receipt_id)
+    ]
+    changed = len(records) < before
+    if changed:
+        _persist()
+    return changed
 
 
 # --------------------------------------------------------------------------- #
@@ -269,17 +154,11 @@ def delete_receipt(receipt_id: int) -> bool:
 # --------------------------------------------------------------------------- #
 
 def history(months: int | None = None) -> pd.DataFrame:
-    if is_demo():
-        return analytics.history_from_receipts(receipts(), months=months)
-    with session_scope() as session:
-        return analytics.personal_price_history(session, months=months)
+    return analytics.history_from_receipts(receipts(), months=months)
 
 
 def receipt_count() -> int:
-    if is_demo():
-        return len(receipts())
-    with session_scope() as session:
-        return int(session.scalar(select(func.count()).select_from(Receipt)) or 0)
+    return len(receipts())
 
 
 def product_options() -> list[str]:
@@ -294,36 +173,24 @@ def product_options() -> list[str]:
 # --------------------------------------------------------------------------- #
 
 def set_category(product_name: str, category: str) -> None:
-    if is_demo():
-        for receipt in receipts():
-            for item in receipt["items"]:
-                if item.get("product") == product_name:
-                    item["category"] = category
-        return
-    with session_scope() as session:
-        product = session.scalar(select(Product).where(Product.product_name == product_name))
-        if product:
-            set_product_category(session, product, category)
+    for receipt in receipts():
+        for item in receipt["items"]:
+            if item.get("product") == product_name:
+                item["category"] = category
+    _persist()
 
 
 def rename_product(product_name: str, new_name: str) -> None:
     new_name = new_name.strip()
     if not new_name or new_name == product_name:
         return
-    if is_demo():
-        existing = set(product_options())
-        if new_name in existing:
-            raise ValueError(f"'{new_name}' already exists")
-        for receipt in receipts():
-            for item in receipt["items"]:
-                if item.get("product") == product_name:
-                    item["product"] = new_name
-        return
-    with session_scope() as session:
-        product = session.scalar(select(Product).where(Product.product_name == product_name))
-        if product is None:
-            raise ValueError("Product not found")
-        _rename_product(session, product, new_name)
+    if new_name in set(product_options()):
+        raise ValueError(f"'{new_name}' already exists")
+    for receipt in receipts():
+        for item in receipt["items"]:
+            if item.get("product") == product_name:
+                item["product"] = new_name
+    _persist()
 
 
 # --------------------------------------------------------------------------- #
@@ -333,9 +200,7 @@ def rename_product(product_name: str, new_name: str) -> None:
 def cpi_frame(country: str) -> tuple[pd.DataFrame, bool]:
     """Return (frame, is_sample). Falls back to the labelled sample series."""
     if is_demo():
-        frame = sample_cpi_frame()
-        frame = frame.rename(columns={"period": "period"})
-        return frame, True
+        return sample_cpi_frame(), True
 
     with session_scope() as session:
         frame = analytics.cpi_history(session, country)
@@ -362,13 +227,6 @@ def import_cpi_rows(country: str, rows: list[dict], source_type: str = "manual_i
         return store_rows(session, country, rows, source_type=source_type)
 
 
-def seed_local_database() -> int:
-    if is_demo():
-        raise ValueError("Demo mode does not write to the database")
-    with session_scope() as session:
-        return _seed_database(session)
-
-
 def export_frame() -> pd.DataFrame:
     frame = history()
     if frame.empty:
@@ -384,3 +242,10 @@ def export_frame() -> pd.DataFrame:
         "total_price": "line_total",
         "store_name": "store",
     })
+
+
+def product_catalogue() -> list[str]:
+    """Every product name known to this account (used for rename pickers)."""
+    with session_scope() as session:
+        names = session.scalars(select(Product.product_name)).all()
+    return sorted({*names, *product_options()})
