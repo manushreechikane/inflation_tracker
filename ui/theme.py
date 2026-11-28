@@ -55,9 +55,39 @@ CSS = """
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-feature-settings: "tnum" 1;
 }
-[data-testid="stHeader"] { background: transparent !important; }
-[data-testid="stToolbar"], [data-testid="stDecoration"],
-[data-testid="stStatusWidget"], #MainMenu, footer { display: none !important; }
+[data-testid="stHeader"] { background: transparent !important; height: 0; }
+[data-testid="stToolbar"], [data-testid="stToolbarActions"], [data-testid="stMainMenu"],
+[data-testid="stDecoration"], [data-testid="stStatusWidget"], #MainMenu, footer {
+  display: none !important;
+}
+
+/* The toolbar is hidden, but its expand button is the only way back into a
+   collapsed sidebar: keep exactly that one control, as a floating pill. */
+body:has([data-testid="stSidebar"][data-collapsed="true"]) [data-testid="stToolbar"] {
+  display: flex !important; position: fixed; top: 0.7rem; left: 0.75rem; z-index: 1000;
+  height: auto; padding: 0 !important; background: transparent !important;
+}
+body:has([data-testid="stSidebar"][data-collapsed="true"]) [data-testid="stExpandSidebarButton"] {
+  display: flex !important; align-items: center; justify-content: center;
+  width: 2.4rem; height: 2.4rem; border-radius: 999px;
+  background: var(--panel) !important; border: 1px solid var(--line) !important;
+  color: var(--ink) !important; box-shadow: 0 6px 18px rgba(47,42,32,0.10);
+  transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+body:has([data-testid="stSidebar"][data-collapsed="true"]) [data-testid="stExpandSidebarButton"]:hover {
+  background: var(--rust) !important; border-color: var(--rust) !important;
+  color: #FFF4EA !important; transform: translateY(-1px);
+}
+body:has([data-testid="stSidebar"][data-collapsed="true"]) [data-testid="stExpandSidebarButton"] span {
+  color: inherit !important;
+}
+@media (max-width: 780px) {
+  /* On a phone the pill bar already reaches every screen (and **You** can sign
+     out), so the floating handle would only sit on top of it. */
+  body:has([data-testid="stSidebar"][data-collapsed="true"]) [data-testid="stToolbar"] {
+    display: none !important;
+  }
+}
 [data-testid="stAppViewBlockContainer"], .block-container {
   padding: 1.1rem 2.4rem 4rem;
   max-width: 1140px;
