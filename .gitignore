@@ -9,3 +9,4 @@ data/cpi/*
 data/*.db
 !data/**/.gitkeep
 logs/
+shots/

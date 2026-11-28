@@ -71,10 +71,17 @@ def _preprocess(image: Image.Image) -> Image.Image:
 
 
 def _lines_from_image(image: Image.Image) -> list[OcrLine]:
-    """Group Tesseract word boxes back into lines, keeping confidence."""
+    """Group Tesseract word boxes back into lines, keeping confidence.
+
+    ``--psm 6`` (one uniform block, reading order) matters: the default layout
+    analysis splits a printed receipt into two columns, so every product name
+    arrives in one block and every price in another and no line has both.
+    """
     _configure_tesseract()
     data = pytesseract.image_to_data(
-        _preprocess(image), output_type=pytesseract.Output.DICT
+        _preprocess(image),
+        config="--psm 6",
+        output_type=pytesseract.Output.DICT,
     )
     grouped: dict[tuple[int, int, int], list[tuple[str, float]]] = {}
     for index, word in enumerate(data.get("text", [])):
@@ -352,6 +359,21 @@ def _parse_total(lines: list[OcrLine]) -> float | None:
     return None
 
 
+def _parse_discount(lines: list[OcrLine]) -> float | None:
+    """Sum printed discount lines so the total can be checked against them."""
+    found = 0.0
+    for line in lines:
+        text = line.text.lower()
+        if "%" in text:
+            continue
+        if not re.search(r"\b(discount|savings?|coupon|voucher|reduced|off)\b", text):
+            continue
+        values = [value for value in amounts(line.text) if value > 0]
+        if values:
+            found += max(values)
+    return round(found, 2) if found else None
+
+
 def parse_receipt_lines(lines: list[OcrLine]) -> dict:
     """Parse structured fields out of OCR lines."""
     clean_lines = [line for line in lines if line.text.strip()]
@@ -407,6 +429,7 @@ def parse_receipt_lines(lines: list[OcrLine]) -> dict:
 
     receipt_total = _parse_total(clean_lines)
     items_total = round(sum(item["ocr_total_price"] for item in items), 2)
+    discount_total = _parse_discount(clean_lines)
 
     confidence_values = [
         item["ocr_confidence"] for item in items if item["ocr_confidence"] is not None
@@ -417,8 +440,10 @@ def parse_receipt_lines(lines: list[OcrLine]) -> dict:
         "store_name": store_name,
         "items": items,
         "items_total": items_total,
+        "discount_total": discount_total,
         "line_item_gap": (
-            round(receipt_total - items_total, 2) if receipt_total is not None else None
+            round(receipt_total - (items_total - (discount_total or 0.0)), 2)
+            if receipt_total is not None else None
         ),
         "ocr_confidence": (
             round(sum(confidence_values) / len(confidence_values), 1)

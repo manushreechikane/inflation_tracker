@@ -32,7 +32,7 @@ from modules.receipt_processing.receipt_processor import (
 from modules.receipt_processing.sample_receipts import SAMPLE_NAMES, render_sample
 from ui import charts, data, theme
 
-WINDOWS = {"3 months": 3, "6 months": 6, "12 months": 12, "All time": 0}
+
 
 
 # --------------------------------------------------------------------------- #
@@ -50,17 +50,9 @@ def render_flash() -> None:
         st.success(f"**{title}** {body}".strip())
 
 
-def window_selector(key: str) -> int | None:
-    choice = st.radio(
-        "Window",
-        list(WINDOWS),
-        index=2,
-        horizontal=True,
-        label_visibility="collapsed",
-        key=key,
-    )
-    months = WINDOWS[choice]
-    return months or None
+def window_selector(key: str = "") -> int | None:
+    """The sidebar owns the window control; screens only read the value."""
+    return st.session_state.get("months") or None
 
 
 def current_country() -> str:
@@ -232,7 +224,17 @@ def page_scan() -> None:
             payload = (upload.name, upload.getvalue())
 
     if payload is None:
-        theme.empty("Drop a receipt to begin.", "JPG, PNG or PDF, up to 10 MB.")
+        theme.steps([
+            ("Photograph the whole bill",
+             "Get the store name, the date and the total line in frame. The total is used "
+             "as a checksum against the items."),
+            ("Fix what the reader guessed",
+             "Every line is editable before it is saved. Names you correct are remembered "
+             "for the next receipt from that shop."),
+            ("Watch your own index",
+             "Prices are weighted by what you actually spend, then compared with official "
+             "CPI on the same axis."),
+        ])
         return
 
     name, blob = payload
@@ -396,16 +398,23 @@ def page_basket() -> None:
             display,
             hide_index=True,
             use_container_width=True,
+            height=min(620, 36 * len(display) + 42),
             column_config={
+                "Product": st.column_config.TextColumn("Product", width="medium"),
+                "Category": st.column_config.TextColumn("Category", width="small"),
+                "Pack": st.column_config.TextColumn("Pack", width="small"),
+                "Obs": st.column_config.NumberColumn("Obs", width="small"),
                 "First": st.column_config.NumberColumn(
-                    "First", format=f"{theme.currency_symbol()}%.2f"
+                    "First", width="small", format=f"{theme.currency_symbol()}%.2f"
                 ),
                 "Latest": st.column_config.NumberColumn(
-                    "Latest", format=f"{theme.currency_symbol()}%.2f"
+                    "Latest", width="small", format=f"{theme.currency_symbol()}%.2f"
                 ),
-                "Change": st.column_config.NumberColumn("Change", format="%+.1f%%"),
+                "Change": st.column_config.NumberColumn(
+                    "Change", width="small", format="%+.1f%%"
+                ),
                 "Share of spend": st.column_config.ProgressColumn(
-                    "Share of spend", min_value=0, max_value=100, format="%.0f%%"
+                    "Spend share", width="small", min_value=0, max_value=100, format="%.0f%%"
                 ),
             },
         )
@@ -562,7 +571,7 @@ def page_cpi() -> None:
 
     theme.hero(
         f"Your basket vs. {SUPPORTED_COUNTRIES[country]['label']} CPI",
-        theme.signed(personal_change),
+        f"{personal_change:+.1f}" if personal_change is not None else "—",
         "since " + theme.month_label(index.iloc[0]["month"]),
         sub=(
             f"Official series over the same months: <b>{official_change:+.1f}%</b>"
@@ -716,10 +725,18 @@ def page_data() -> None:
         render_system_status()
 
 
+PAGE_LABELS = {
+    "overview": "This month",
+    "scan": "Add a receipt",
+    "basket": "My basket",
+    "cpi": "vs. CPI",
+    "data": "Data",
+}
+
 PAGES = {
-    "This month": page_overview,
-    "Add a receipt": page_scan,
-    "My basket": page_basket,
-    "vs. CPI": page_cpi,
-    "Data": page_data,
+    "overview": page_overview,
+    "scan": page_scan,
+    "basket": page_basket,
+    "cpi": page_cpi,
+    "data": page_data,
 }

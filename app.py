@@ -1,21 +1,20 @@
 """InflationLens — entry point.
 
-A single narrative page rather than a dashboard: this month, add a receipt,
-your basket, against official CPI, data. Navigation is text tabs, the sidebar is
-gone, and the framework chrome is hidden in :mod:`ui.theme`.
+Navigation and the reporting window live in the sidebar, the way a paper
+ledger has its index down the side; the body is one continuous story.
 """
 import streamlit as st
 
 from config.constants import APP_NAME, APP_TAGLINE
 from modules.data_management.database import init_db
 from ui import data, theme
-from ui.pages import PAGES, render_flash
+from ui.pages import PAGE_LABELS, PAGES, render_flash
 
 st.set_page_config(
     page_title=f"{APP_NAME} — {APP_TAGLINE}",
     page_icon="🧾",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 
@@ -25,19 +24,47 @@ def _setup() -> bool:
     return True
 
 
+WINDOWS = [("3m", "3 mo", 3), ("6m", "6 mo", 6), ("12m", "12 mo", 12), ("all", "All", 0)]
+
+
+def _sidebar() -> None:
+    st.session_state.setdefault("page", "overview")
+    st.session_state.setdefault("months", 12)
+
+    with st.sidebar:
+        theme.brand(data.mode_label())
+
+        theme.side_label("Ledger")
+        with st.container(key="navlist"):
+            for slug, label in PAGE_LABELS.items():
+                active = st.session_state["page"] == slug
+                if st.button(label, key=f"nav_{slug}", use_container_width=True,
+                             type="primary" if active else "secondary"):
+                    st.session_state["page"] = slug
+                    st.rerun()
+
+        theme.side_label("Window")
+        with st.container(key="windowgrid"):
+            rows = [WINDOWS[:2], WINDOWS[2:]]
+            for row in rows:
+                cols = st.columns(2, gap="small")
+                for col, (slug, label, months) in zip(cols, row):
+                    active = int(st.session_state["months"]) == months
+                    if col.button(label, key=f"win_{slug}", use_container_width=True,
+                                  type="primary" if active else "secondary"):
+                        st.session_state["months"] = months
+                        st.rerun()
+
+        theme.side_foot(
+            "Built from receipts, not averages.<br>"
+            "<b>Demo mode</b> keeps everything in this tab."
+        )
+
+
 _setup()
 theme.apply()
-
-theme.masthead(data.mode_label())
-
-page = st.radio(
-    "Navigate",
-    list(PAGES),
-    horizontal=True,
-    label_visibility="collapsed",
-    key="nav",
-)
+_sidebar()
 
 render_flash()
-PAGES[page]()
+PAGES[st.session_state["page"]]()
 theme.footer()

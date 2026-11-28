@@ -112,3 +112,15 @@ def test_parse_date_formats():
 def test_category_is_guessed_from_the_name():
     parsed = parse_receipt("Store\nAMUL TONED MILK 500 ML 34.00\n")
     assert parsed["items"][0]["category"] == "Dairy"
+
+
+def test_printed_discount_is_not_read_as_a_missing_line():
+    from modules.receipt_processing.receipt_processor import OcrLine, parse_receipt_lines
+
+    parsed = parse_receipt_lines([
+        OcrLine("AASHIRVAAD ATTA 5 KG 1,299.00"),
+        OcrLine("TOTAL 1,268.00"),
+        OcrLine("BILL DISCOUNT 31.00"),
+    ])
+    assert parsed["discount_total"] == 31.0
+    assert parsed["line_item_gap"] == 0

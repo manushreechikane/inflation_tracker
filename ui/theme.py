@@ -1,8 +1,10 @@
 """Visual system: one stylesheet, one set of formatting helpers.
 
-The goal is that nothing on screen looks like the framework default: no
-sidebar, no Streamlit toolbar, serif display type against a warm paper ground,
-hairline rules instead of cards-on-cards, and tabular figures for every price.
+The look borrows from printed grocery packaging rather than from dashboards:
+warm cream paper, terracotta ink, a wobbly display serif, lilac bands and
+sticker badges. Everything is emitted as *one line* of HTML because markdown
+treats indented markup as a code block — which is exactly how the metric strip
+ended up printing its own source on screen.
 """
 from __future__ import annotations
 
@@ -13,183 +15,348 @@ import streamlit as st
 from config import settings
 from config.constants import SUPPORTED_CURRENCIES
 
-INK = "#17211F"
-MUTED = "#6E7672"
-PAPER = "#FBF8F2"
-PANEL = "#FFFFFF"
-LINE = "#E2DCCF"
-TEAL = "#1F4E5F"
-UP = "#A8442B"
-DOWN = "#2F6B4F"
-AMBER = "#B4741F"
+INK = "#2F2A20"
+MUTED = "#857B69"
+PAPER = "#FBF3E4"
+SAND = "#F3E7D2"
+PANEL = "#FFFDF8"
+LINE = "#E3D8C3"
+RUST = "#B4401E"
+SAGE = "#6F7F52"
+LILAC = "#CDC2E6"
+LILAC_SOFT = "#E6DFF4"
+
+# Kept for callers that imported the older names.
+TEAL = RUST
+UP = RUST
+DOWN = SAGE
 
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,400..900,0..100,0..1&family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  --ink: #17211F;
-  --muted: #6E7672;
-  --paper: #FBF8F2;
-  --panel: #FFFFFF;
-  --line: #E2DCCF;
-  --teal: #1F4E5F;
-  --up: #A8442B;
-  --down: #2F6B4F;
-  --amber: #B4741F;
+  --ink: #2F2A20;
+  --muted: #857B69;
+  --paper: #FBF3E4;
+  --sand: #F3E7D2;
+  --panel: #FFFDF8;
+  --line: #E3D8C3;
+  --rust: #B4401E;
+  --sage: #6F7F52;
+  --lilac: #CDC2E6;
+  --lilac-soft: #E6DFF4;
+  --radius: 26px;
 }
 
-html, body, .stApp, [data-testid="stAppViewContainer"] {
+.stApp, [data-testid="stAppViewContainer"] {
   background: var(--paper) !important;
   color: var(--ink);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-feature-settings: "tnum" 1, "cv05" 1;
+  font-feature-settings: "tnum" 1;
 }
-
-[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"],
+[data-testid="stHeader"] { background: transparent !important; }
+[data-testid="stToolbar"], [data-testid="stDecoration"],
 [data-testid="stStatusWidget"], #MainMenu, footer { display: none !important; }
 [data-testid="stAppViewBlockContainer"], .block-container {
-  padding: 1.2rem 2.2rem 6rem;
+  padding: 1.1rem 2.4rem 4rem;
   max-width: 1140px;
 }
 
 h1, h2, h3, h4 {
   font-family: 'Fraunces', Georgia, serif !important;
-  font-weight: 500 !important;
-  letter-spacing: -0.015em;
+  font-weight: 600 !important;
+  font-variation-settings: "SOFT" 70, "WONK" 1, "opsz" 96;
+  letter-spacing: -0.02em;
   color: var(--ink) !important;
 }
-h1 { font-size: 2.1rem; }
-h2 { font-size: 1.65rem; margin: 0.4rem 0 0.2rem; }
-h3 { font-size: 1.25rem; }
+h1 { font-size: 2rem; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.2rem; }
 p, li, label, .stMarkdown, .stText { color: var(--ink); }
-a { color: var(--teal) !important; }
+a { color: var(--rust) !important; }
 hr { border-color: var(--line); }
+::selection { background: var(--lilac); color: var(--ink); }
 
-/* ---------- masthead ---------- */
-.il-masthead {
-  display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap;
-  border-bottom: 1px solid var(--line); padding-bottom: 0.7rem; margin-bottom: 0.2rem;
+/* ---------------- sidebar ---------------- */
+[data-testid="stSidebar"] {
+  background: var(--sand) !important;
+  border-right: 1px solid var(--line);
+  width: 285px !important;
+  min-width: 285px !important;
 }
+[data-testid="stSidebarContent"] { background: transparent !important; }
+[data-testid="stSidebarUserContent"] { padding: 1.5rem 1.15rem 1.5rem; }
+[data-testid="stSidebar"] hr { border-color: rgba(47,42,32,0.1); margin: 0.9rem 0; }
+[data-testid="stSidebarCollapseButton"] button { color: var(--ink) !important; }
+
+.il-brand { padding-bottom: 0.2rem; }
 .il-wordmark {
-  font-family: 'Fraunces', Georgia, serif; font-size: 1.6rem; letter-spacing: -0.03em;
+  font-family: 'Fraunces', Georgia, serif;
+  font-variation-settings: "SOFT" 80, "WONK" 1, "opsz" 120;
+  font-weight: 700; font-size: 1.72rem; line-height: 1; letter-spacing: -0.035em;
   color: var(--ink);
 }
-.il-wordmark em { font-style: normal; color: var(--teal); }
-.il-tagline { color: var(--muted); font-size: 0.86rem; }
+.il-wordmark em { font-style: normal; color: var(--rust); }
+.il-tagline {
+  margin-top: 0.45rem; color: var(--muted); font-size: 0.79rem; line-height: 1.4;
+  max-width: 13rem;
+}
 .il-mode {
-  margin-left: auto; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0.18rem 0.6rem;
-  background: rgba(255,255,255,0.6);
+  display: inline-block; margin-top: 0.7rem; font-size: 0.64rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink); background: var(--lilac);
+  border-radius: 999px; padding: 0.2rem 0.6rem;
+}
+.il-side-label {
+  font-size: 0.64rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); margin: 1.1rem 0 0.45rem;
+}
+.il-side-foot {
+  margin-top: 1.4rem; padding-top: 0.9rem; border-top: 1px solid rgba(47,42,32,0.1);
+  color: var(--muted); font-size: 0.74rem; line-height: 1.5;
+}
+.il-side-foot b { color: var(--ink); font-weight: 500; }
+
+/* ---------------- buttons ---------------- */
+.stButton button, .stDownloadButton button, .stFormSubmitButton button {
+  font-family: 'Inter', sans-serif; font-weight: 500; font-size: 0.9rem;
+  border-radius: 999px !important; border: 1px solid var(--line);
+  background: transparent; color: var(--ink);
+  padding: 0.45rem 1.1rem !important; transition: all 140ms ease;
+}
+.stButton button:hover, .stDownloadButton button:hover {
+  border-color: var(--ink); background: rgba(255,255,255,0.7); color: var(--ink);
+}
+[data-testid="stBaseButton-primary"], .stButton button[kind="primary"] {
+  background: var(--rust) !important; border-color: var(--rust) !important;
+  color: #FFF4EA !important;
+}
+[data-testid="stBaseButton-primary"]:hover, .stButton button[kind="primary"]:hover {
+  background: #98351A !important; border-color: #98351A !important; color: #FFF4EA !important;
+}
+[data-testid="stSidebar"] [data-testid="stBaseButton-secondary"],
+[data-testid="stSidebar"] .stButton button[kind="secondary"] {
+  background: transparent !important; border-color: transparent !important;
+}
+.stDownloadButton button, .stFormSubmitButton button[kind="secondary"] {
+  border: 1px solid var(--ink) !important; color: var(--ink) !important;
 }
 
-/* ---------- navigation as text tabs ---------- */
-div[data-testid="stRadio"] > div[role="radiogroup"] {
-  gap: 1.7rem !important; padding: 0.5rem 0 0.1rem;
+/* sidebar navigation: stacked pills, left aligned */
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0.45rem; }
+[data-testid="stSidebar"] [data-testid="stElementContainer"] { margin-bottom: 0 !important; }
+.st-key-navlist [data-testid="stVerticalBlock"],
+.st-key-windowgrid [data-testid="stVerticalBlock"],
+.st-key-windowgrid [data-testid="stHorizontalBlock"] { gap: 0.15rem !important; }
+.st-key-navlist .stButton button {
+  width: 100%; justify-content: flex-start !important; text-align: left !important;
+  padding: 0.46rem 1rem !important; font-size: 0.93rem; border-radius: 999px !important;
+  display: flex !important;
 }
-div[data-testid="stRadio"] label {
-  background: transparent !important; padding: 0 0 0.45rem 0 !important;
-  border-bottom: 2px solid transparent; border-radius: 0 !important;
-  font-size: 0.92rem; color: var(--muted); cursor: pointer;
+.st-key-navlist .stButton button > div {
+  justify-content: flex-start !important; text-align: left !important;
+  width: 100%; margin: 0 !important;
 }
-div[data-testid="stRadio"] label:hover { color: var(--ink); }
-div[data-testid="stRadio"] label:has(input:checked) {
-  border-bottom-color: var(--teal); color: var(--ink); font-weight: 500;
+.st-key-navlist .stButton button p {
+  font-size: 0.93rem !important; text-align: left !important; margin: 0 !important;
 }
-div[data-testid="stRadio"] label > div:first-child { display: none !important; }
-div[data-testid="stRadio"] label p { font-size: 0.92rem; }
+.st-key-navlist .stButton button[kind="secondary"] { color: var(--ink) !important; }
+.st-key-navlist .stButton button[kind="secondary"]:hover {
+  background: rgba(255,255,255,0.75) !important;
+}
+.st-key-windowgrid .stButton button {
+  width: 100%; justify-content: center !important; padding: 0.35rem 0.4rem !important;
+  font-size: 0.78rem; letter-spacing: 0.02em;
+}
+.st-key-windowgrid .stButton button p { font-size: 0.78rem !important; }
 
-/* ---------- hero ---------- */
-.il-hero { padding: 2.2rem 0 1.2rem; border-bottom: 1px solid var(--line); }
+/* ---------------- hero ---------------- */
+.il-hero {
+  position: relative; overflow: hidden;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 2.1rem 2.3rem 2rem; margin: 1.1rem 0 1.3rem;
+}
+.il-hero::before {
+  content: ""; position: absolute; right: -70px; top: -110px; width: 330px; height: 330px;
+  border-radius: 50%; background: var(--lilac-soft); opacity: 0.8;
+}
+.il-hero-copy { position: relative; z-index: 1; max-width: 34rem; }
 .il-kicker {
-  font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 0.5rem;
+  font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 0.6rem;
 }
-.il-hero-row { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
 .il-bignum {
-  font-family: 'Fraunces', Georgia, serif; font-size: clamp(2.6rem, 6vw, 4.4rem);
-  line-height: 0.95; letter-spacing: -0.035em; color: var(--ink);
+  font-family: 'Fraunces', Georgia, serif;
+  font-variation-settings: "SOFT" 90, "WONK" 1, "opsz" 144;
+  font-weight: 700; font-size: clamp(3.4rem, 7vw, 5.4rem); line-height: 0.86;
+  letter-spacing: -0.04em; color: var(--rust); display: block;
 }
-.il-unit { font-size: 0.42em; margin-left: 0.12em; color: var(--muted); }
-.il-hero-note { color: var(--muted); font-size: 0.95rem; max-width: 30rem; }
-.il-hero-sub { margin-top: 0.7rem; color: var(--muted); font-size: 0.95rem; }
-.il-hero-sub b { color: var(--ink); font-weight: 500; }
+.il-unit { font-size: 0.34em; margin-left: 0.14em; color: var(--muted); font-weight: 500; }
+.il-squiggle { display: block; margin: 0.75rem 0 0.85rem; }
+.il-hero-note { color: var(--ink); font-size: 0.98rem; line-height: 1.5; max-width: 26rem; }
+.il-hero-sub { margin-top: 0.6rem; color: var(--muted); font-size: 0.92rem; }
+.il-hero-sub b { color: var(--ink); font-weight: 600; }
 
-/* ---------- metric strip ---------- */
+.il-sticker {
+  position: absolute; right: 2.4rem; top: 50%; transform: translateY(-50%) rotate(-7deg);
+  width: 142px; height: 142px; z-index: 2;
+}
+@media (max-width: 780px) { .il-sticker { display: none; } }
+
+/* ---------------- metric band ---------------- */
 .il-kpis {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  border-bottom: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  background: var(--lilac-soft); border-radius: var(--radius);
+  padding: 0.3rem 0.5rem; margin: 0 0 1.7rem;
 }
-.il-kpi { padding: 1.1rem 1.2rem 1.1rem 0; border-right: 1px solid var(--line); }
+.il-kpi { padding: 1.15rem 1.35rem; border-right: 1px solid rgba(47,42,32,0.14); }
 .il-kpi:last-child { border-right: 0; }
-.il-kpi-label { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.il-kpi-label {
+  font-size: 0.64rem; letter-spacing: 0.14em; text-transform: uppercase; color: #6B6355;
+}
 .il-kpi-value {
-  font-family: 'Fraunces', Georgia, serif; font-size: 1.55rem; letter-spacing: -0.02em;
-  margin-top: 0.25rem; color: var(--ink);
+  font-family: 'Fraunces', Georgia, serif;
+  font-variation-settings: "SOFT" 70, "WONK" 1, "opsz" 90;
+  font-weight: 600; font-size: 1.5rem; letter-spacing: -0.025em;
+  margin-top: 0.3rem; color: var(--ink);
 }
-.il-kpi-note { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
+.il-kpi-note { font-size: 0.78rem; color: #6B6355; margin-top: 0.15rem; }
+@media (max-width: 900px) {
+  .il-kpis { grid-template-columns: repeat(2, 1fr); }
+  .il-kpi:nth-child(2) { border-right: 0; }
+  .il-kpi:nth-child(1), .il-kpi:nth-child(2) { border-bottom: 1px solid rgba(47,42,32,0.14); }
+}
 
-/* ---------- section ---------- */
-.il-section { display: flex; align-items: baseline; gap: 0.9rem; margin: 2.6rem 0 0.2rem; }
-.il-section-title { font-family: 'Fraunces', Georgia, serif; font-size: 1.35rem; letter-spacing: -0.01em; }
-.il-section-kicker { font-size: 0.78rem; color: var(--muted); }
-.il-rule { height: 1px; background: var(--line); margin: 0.55rem 0 1.1rem; }
+/* ---------------- sections ---------------- */
+.il-section { display: flex; align-items: baseline; gap: 0.9rem; margin: 2.1rem 0 0.35rem; }
+.il-section-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-variation-settings: "SOFT" 70, "WONK" 1, "opsz" 100;
+  font-weight: 600; font-size: 1.32rem; letter-spacing: -0.015em; color: var(--ink);
+}
+.il-section-kicker { font-size: 0.76rem; color: var(--muted); }
+.il-rule { height: 1px; background: var(--line); margin: 0.5rem 0 1rem; }
 
-/* ---------- chips / badges ---------- */
+/* ---------------- chips, notes, alerts ---------------- */
 .il-chip {
-  display: inline-block; font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase;
-  padding: 0.12rem 0.5rem; border-radius: 999px; border: 1px solid currentColor;
-  vertical-align: middle;
+  display: inline-block; font-size: 0.64rem; letter-spacing: 0.09em; text-transform: uppercase;
+  padding: 0.16rem 0.5rem; border-radius: 999px; border: 1px solid currentColor;
+  vertical-align: middle; font-weight: 500;
 }
-.il-chip--up { color: var(--up); }
-.il-chip--down { color: var(--down); }
+.il-chip--up { color: var(--rust); background: #FBEDE4; border-color: #EBC9B6; }
+.il-chip--down { color: var(--sage); background: #EDF1E4; border-color: #CBD3B4; }
 .il-chip--flat { color: var(--muted); }
-.il-chip--sample { color: var(--amber); }
+.il-chip--sample { color: var(--ink); background: var(--lilac); border-color: var(--lilac); }
 
-.il-note { color: var(--muted); font-size: 0.84rem; line-height: 1.5; }
+.il-note { color: var(--muted); font-size: 0.84rem; line-height: 1.55; }
+.il-note b { color: var(--ink); }
+.il-note code {
+  background: var(--sand); padding: 0.05rem 0.3rem; border-radius: 4px;
+  font-size: 0.8rem; color: var(--ink);
+}
 .il-small { font-size: 0.82rem; color: var(--muted); }
 
 .il-alert {
-  border-left: 3px solid var(--amber); background: rgba(180,116,31,0.06);
-  padding: 0.85rem 1rem; margin: 0.6rem 0;
+  border: 1px solid #EBC9B6; border-left: 4px solid var(--rust);
+  background: #FBEDE4; border-radius: 0 18px 18px 0;
+  padding: 0.9rem 1.1rem; margin: 0.7rem 0;
 }
-.il-alert-title { font-weight: 500; font-size: 0.95rem; }
-.il-alert-body { color: var(--muted); font-size: 0.86rem; margin-top: 0.15rem; }
+.il-alert-title {
+  font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 1rem; color: var(--ink);
+}
+.il-alert-body { color: #6B6355; font-size: 0.85rem; margin-top: 0.2rem; line-height: 1.5; }
 
 .il-empty {
-  border: 1px dashed var(--line); padding: 2rem; text-align: center;
-  color: var(--muted); font-size: 0.92rem; background: rgba(255,255,255,0.45);
+  border: 1px dashed #D8CBB2; border-radius: 20px; padding: 2.2rem 1.5rem;
+  text-align: center; color: var(--muted); font-size: 0.92rem;
+  background: rgba(255,253,248,0.6);
 }
 
-/* ---------- widgets ---------- */
-.stButton > button, .stDownloadButton > button, .stFormSubmitButton > button {
-  background: var(--ink); color: var(--paper); border: 1px solid var(--ink);
-  border-radius: 2px; padding: 0.42rem 1.05rem; font-weight: 500; font-size: 0.88rem;
-  transition: background 120ms ease, border-color 120ms ease;
+/* ---------------- numbered steps ---------------- */
+.il-steps {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; margin: 1.6rem 0 0;
 }
-.stButton > button:hover, .stDownloadButton > button:hover, .stFormSubmitButton > button:hover {
-  background: var(--teal); border-color: var(--teal); color: #fff;
+.il-step {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 20px;
+  padding: 1.2rem 1.2rem 1.3rem;
 }
-.stButton > button:focus:not(:active) { color: var(--paper); }
-div[data-testid="stFileUploaderDropzone"] {
-  background: rgba(255,255,255,0.5); border: 1px dashed var(--line); border-radius: 2px;
+.il-step-n {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.9rem; height: 1.9rem; border-radius: 999px; background: var(--lilac);
+  font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 0.95rem;
+  color: var(--ink); margin-bottom: 0.7rem;
 }
-div[data-testid="stExpander"] details { border: 1px solid var(--line); border-radius: 2px; }
-div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {
-  border: 1px solid var(--line); border-radius: 2px;
+.il-step-t {
+  font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 1.02rem;
+  color: var(--ink); letter-spacing: -0.01em;
 }
-div[data-testid="stMetricValue"] { font-family: 'Fraunces', Georgia, serif; }
+.il-step-d { color: var(--muted); font-size: 0.82rem; line-height: 1.5; margin-top: 0.25rem; }
+@media (max-width: 900px) { .il-steps { grid-template-columns: 1fr; } }
+
+/* ---------------- charts, tables, widgets ---------------- */
+[data-testid="stPlotlyChart"] {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 22px;
+  padding: 0.4rem 0.5rem; overflow: hidden;
+}
+[data-testid="stDataFrame"], [data-testid="stDataEditor"] {
+  border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+}
+[data-testid="stExpander"] details {
+  border: 1px solid var(--line); border-radius: 16px; background: rgba(255,253,248,0.6);
+}
+[data-testid="stFileUploaderDropzone"] {
+  background: rgba(255,253,248,0.65); border: 1px dashed #D8CBB2; border-radius: 18px;
+}
+[data-testid="stAlert"] { border-radius: 16px; }
+
+/* pill radio (source pickers in the body) */
+div[data-testid="stRadio"] > div[role="radiogroup"] {
+  gap: 0.4rem; padding: 0.15rem 0 0.6rem; flex-wrap: wrap;
+}
+div[data-testid="stRadio"] label {
+  background: transparent !important; border: 1px solid var(--line); border-radius: 999px;
+  padding: 0.3rem 0.95rem !important; color: var(--muted);
+  cursor: pointer; transition: all 140ms ease;
+}
+div[data-testid="stRadio"] label:hover { border-color: var(--ink); }
+div[data-testid="stRadio"] label:has(input:checked),
+div[data-testid="stRadio"] label[data-selected="true"] {
+  background: var(--ink) !important; border-color: var(--ink);
+}
+div[data-testid="stRadio"] label:has(input:checked) p,
+div[data-testid="stRadio"] label[data-selected="true"] p { color: var(--paper) !important; }
+/* hide only the inline radio dot, never the text wrapper */
+div[data-testid="stRadio"] label > div > div:first-child { display: none !important; }
+div[data-testid="stRadio"] label > div { align-items: center; }
+div[data-testid="stRadio"] label p { font-size: 0.86rem; margin: 0 !important; color: inherit; }
+
 .stSelectbox label, .stTextInput label, .stNumberInput label, .stDateInput label,
-.stMultiSelect label, .stFileUploader label, .stTextArea label {
-  font-size: 0.78rem !important; letter-spacing: 0.06em; text-transform: uppercase;
+.stMultiSelect label, .stFileUploader label, .stTextArea label, .stSlider label {
+  font-size: 0.68rem !important; letter-spacing: 0.14em; text-transform: uppercase;
   color: var(--muted) !important;
 }
-div[data-testid="stAlert"] { border-radius: 2px; }
+[data-baseweb="select"] > div, [data-baseweb="input"] {
+  border-radius: 12px !important; background: var(--panel) !important;
+}
 
-.il-foot { border-top: 1px solid var(--line); margin-top: 4rem; padding-top: 0.9rem;
-  color: var(--muted); font-size: 0.78rem; }
+.il-foot {
+  border-top: 1px solid var(--line); margin-top: 3.5rem; padding-top: 0.9rem;
+  color: var(--muted); font-size: 0.76rem; letter-spacing: 0.01em;
+}
 </style>
 """
+
+_SQUIGGLE = (
+    '<svg class="il-squiggle" width="118" height="12" viewBox="0 0 118 12" fill="none" '
+    'aria-hidden="true"><path d="M2 7.5C10 1.5 16 1.5 24 7.5S38 13.5 46 7.5 60 1.5 68 7.5'
+    ' 82 13.5 90 7.5 104 1.5 116 6.5" stroke="#B4401E" stroke-width="2.4" '
+    'stroke-linecap="round"/></svg>'
+)
+
+
+def _blk(markup: str) -> str:
+    """Collapse markup to one line so markdown cannot read it as a code block."""
+    return " ".join(part for part in (line.strip() for line in markup.splitlines()) if part)
 
 
 def apply() -> None:
@@ -251,84 +418,116 @@ def month_label(period: str) -> str:
         return str(period)
 
 
-def masthead(mode_label: str) -> None:
+def brand(mode_label: str) -> None:
+    """Sidebar masthead."""
     st.markdown(
-        f"""
-        <div class="il-masthead">
+        _blk(f"""
+        <div class="il-brand">
           <div class="il-wordmark">Inflation<em>Lens</em></div>
-          <div class="il-tagline">Your groceries. Your prices. Your real inflation.</div>
+          <div class="il-tagline">Your groceries. Your prices.
+            Your real inflation.</div>
           <div class="il-mode">{esc(mode_label)}</div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
 
+def side_label(text: str) -> None:
+    st.markdown(f'<div class="il-side-label">{esc(text)}</div>', unsafe_allow_html=True)
+
+
+def side_foot(markup: str) -> None:
+    st.markdown(f'<div class="il-side-foot">{markup}</div>', unsafe_allow_html=True)
+
+
+def masthead(mode_label: str) -> None:
+    """Kept for compatibility; the masthead now lives in the sidebar."""
+    brand(mode_label)
+
+
 def section(title: str, kicker: str = "") -> None:
     st.markdown(
-        f"""
+        _blk(f"""
         <div class="il-section">
           <span class="il-section-title">{esc(title)}</span>
           <span class="il-section-kicker">{esc(kicker)}</span>
         </div>
         <div class="il-rule"></div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
 
-def hero(kicker: str, value: str, note: str, sub: str = "", unit: str = "%") -> None:
+def _sticker(glyph: str) -> str:
+    return (
+        '<svg class="il-sticker" viewBox="0 0 132 132" aria-hidden="true">'
+        '<defs><path id="il-circle" d="M66,66 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs>'
+        f'<circle cx="66" cy="66" r="64" fill="{LILAC}"/>'
+        f'<circle cx="66" cy="66" r="52" fill="none" stroke="{INK}" stroke-width="0.8" opacity="0.35"/>'
+        f'<text font-family="Inter, sans-serif" font-size="8" letter-spacing="1.7" fill="{INK}">'
+        '<textPath href="#il-circle" startOffset="2">REAL PRICES · REAL RECEIPTS · </textPath></text>'
+        f'<text x="66" y="80" text-anchor="middle" font-family="Inter, Helvetica, sans-serif" '
+        f'font-weight="600" font-size="30" fill="{INK}">{glyph}</text>'
+        '</svg>'
+    )
+
+
+def hero(kicker: str, value: str, note: str, sub: str = "", unit: str = "%",
+         sticker: str = "₹") -> None:
     st.markdown(
-        f"""
+        _blk(f"""
         <div class="il-hero">
-          <div class="il-kicker">{esc(kicker)}</div>
-          <div class="il-hero-row">
+          <div class="il-hero-copy">
+            <div class="il-kicker">{esc(kicker)}</div>
             <span class="il-bignum">{esc(value)}<span class="il-unit">{esc(unit)}</span></span>
-            <span class="il-hero-note">{note}</span>
+            {_SQUIGGLE}
+            <div class="il-hero-note">{note}</div>
+            {f'<div class="il-hero-sub">{sub}</div>' if sub else ''}
           </div>
-          {f'<div class="il-hero-sub">{sub}</div>' if sub else ''}
+          {_sticker(sticker)}
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
 
 def kpis(items: list[tuple[str, str, str]]) -> None:
     cells = "".join(
-        f"""
-        <div class="il-kpi">
-          <div class="il-kpi-label">{esc(label)}</div>
-          <div class="il-kpi-value">{esc(value)}</div>
-          <div class="il-kpi-note">{esc(note)}</div>
-        </div>
-        """
+        f'<div class="il-kpi"><div class="il-kpi-label">{esc(label)}</div>'
+        f'<div class="il-kpi-value">{esc(value)}</div>'
+        f'<div class="il-kpi-note">{esc(note)}</div></div>'
         for label, value, note in items
     )
     st.markdown(f'<div class="il-kpis">{cells}</div>', unsafe_allow_html=True)
 
 
 def note(text: str) -> None:
-    st.markdown(f'<div class="il-note">{text}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="il-note">{_blk(text)}</div>', unsafe_allow_html=True)
 
 
 def alert(title: str, body: str) -> None:
     st.markdown(
-        f"""
-        <div class="il-alert">
-          <div class="il-alert-title">{esc(title)}</div>
-          <div class="il-alert-body">{body}</div>
-        </div>
-        """,
+        f'<div class="il-alert"><div class="il-alert-title">{esc(title)}</div>'
+        f'<div class="il-alert-body">{_blk(body)}</div></div>',
         unsafe_allow_html=True,
     )
+
+
+def steps(items: list[tuple[str, str]]) -> None:
+    """Numbered how-it-works cards, for screens that start blank."""
+    cards = "".join(
+        f'<div class="il-step"><div class="il-step-n">{index}</div>'
+        f'<div class="il-step-t">{esc(title)}</div>'
+        f'<div class="il-step-d">{esc(body)}</div></div>'
+        for index, (title, body) in enumerate(items, start=1)
+    )
+    st.markdown(f'<div class="il-steps">{cards}</div>', unsafe_allow_html=True)
 
 
 def empty(message: str, hint: str = "") -> None:
-    st.markdown(
-        f'<div class="il-empty">{esc(message)}'
-        f'{f"<br><span class=\'il-small\'>{esc(hint)}</span>" if hint else ""}</div>',
-        unsafe_allow_html=True,
-    )
+    tail = f'<br><span class="il-small">{esc(hint)}</span>' if hint else ""
+    st.markdown(f'<div class="il-empty">{esc(message)}{tail}</div>', unsafe_allow_html=True)
 
 
 def footer() -> None:
