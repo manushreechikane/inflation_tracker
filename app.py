@@ -14,7 +14,7 @@ st.set_page_config(
     page_title=f"{APP_NAME} — {APP_TAGLINE}",
     page_icon="🧾",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
 )
 
 
@@ -57,13 +57,46 @@ def _sidebar() -> None:
 
         theme.side_foot(
             "Built from receipts, not averages.<br>"
-            "<b>Demo mode</b> keeps everything in this tab."
+            "Nine months of sample receipts are loaded."
         )
+
+
+MOBILE_LABELS = {
+    "overview": "This month",
+    "scan": "Add a receipt",
+    "basket": "Basket",
+    "cpi": "vs. CPI",
+    "data": "Data",
+}
+
+
+def _mobile_nav() -> None:
+    """A second copy of the controls, shown only under 780px.
+
+    Streamlit collapses the sidebar on narrow screens without drawing a toggle,
+    so a phone would otherwise have no way to change screen or window.
+    """
+    with st.container(key="mobilenav"):
+        with st.container(key="mnav_pages"):
+            for slug, label in MOBILE_LABELS.items():
+                active = st.session_state["page"] == slug
+                if st.button(label, key=f"mnav_{slug}",
+                             type="primary" if active else "secondary"):
+                    st.session_state["page"] = slug
+                    st.rerun()
+        with st.container(key="mnav_windows"):
+            for slug, label, months in WINDOWS:
+                active = int(st.session_state["months"]) == months
+                if st.button(label, key=f"mwin_{slug}",
+                             type="primary" if active else "secondary"):
+                    st.session_state["months"] = months
+                    st.rerun()
 
 
 _setup()
 theme.apply()
 _sidebar()
+_mobile_nav()
 
 render_flash()
 PAGES[st.session_state["page"]]()

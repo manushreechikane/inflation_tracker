@@ -72,7 +72,7 @@ SQLite file means one shared basket for everybody.
 ## How it fits together
 
 ```text
-app.py                    masthead + text-tab navigation + page dispatch
+app.py                    sidebar navigation, mobile pill bar, page dispatch
 ui/theme.py               the stylesheet and formatting helpers
 ui/charts.py              one sparse chart language (no grids, no legends)
 ui/data.py                the single data layer: demo session <-> SQLite

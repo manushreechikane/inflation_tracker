@@ -87,7 +87,7 @@ def index_chart(personal: pd.DataFrame, official: pd.DataFrame | None = None,
     low, high = min(values), max(values)
     pad = max((high - low) * 0.22, 1.5)
     fig.update_yaxes(range=[low - pad, high + pad])
-    fig.update_xaxes(range=[-0.4, len(months) + 1.4])
+    fig.update_xaxes(range=[-0.4, len(months) + 2.4])
     return _frame(fig, height)
 
 

@@ -16,7 +16,7 @@ from config import settings
 from config.constants import SUPPORTED_CURRENCIES
 
 INK = "#2F2A20"
-MUTED = "#857B69"
+MUTED = "#6B6355"
 PAPER = "#FBF3E4"
 SAND = "#F3E7D2"
 PANEL = "#FFFDF8"
@@ -37,7 +37,7 @@ CSS = """
 
 :root {
   --ink: #2F2A20;
-  --muted: #857B69;
+  --muted: #6B6355;
   --paper: #FBF3E4;
   --sand: #F3E7D2;
   --panel: #FFFDF8;
@@ -228,7 +228,10 @@ hr { border-color: var(--line); }
 }
 
 /* ---------------- sections ---------------- */
-.il-section { display: flex; align-items: baseline; gap: 0.9rem; margin: 2.1rem 0 0.35rem; }
+.il-section {
+  display: flex; align-items: baseline; gap: 0.9rem; flex-wrap: wrap;
+  margin: 2.1rem 0 0.35rem;
+}
 .il-section-title {
   font-family: 'Fraunces', Georgia, serif;
   font-variation-settings: "SOFT" 70, "WONK" 1, "opsz" 100;
@@ -342,6 +345,36 @@ div[data-testid="stRadio"] label p { font-size: 0.86rem; margin: 0 !important; c
 .il-foot {
   border-top: 1px solid var(--line); margin-top: 3.5rem; padding-top: 0.9rem;
   color: var(--muted); font-size: 0.76rem; letter-spacing: 0.01em;
+}
+
+/* mobile control bar: hidden on desktop */
+.st-key-mobilenav { display: none; }
+
+/* ---------------- small screens ---------------- */
+@media (max-width: 780px) {
+  .st-key-mobilenav { display: block; margin: 0.1rem 0 0.8rem; }
+  .st-key-mnav_pages, .st-key-mnav_windows {
+    display: flex !important; flex-direction: row !important; gap: 0.3rem !important;
+    overflow-x: auto; padding-bottom: 0.25rem; scrollbar-width: none;
+  }
+  .st-key-mnav_windows { margin-top: 0.1rem; }
+  .st-key-mobilenav .stButton button {
+    width: auto !important; white-space: nowrap; padding: 0.3rem 0.75rem !important;
+    font-size: 0.78rem; border-radius: 999px !important;
+  }
+  .st-key-mobilenav .stButton button p { font-size: 0.78rem !important; }
+  .st-key-mobilenav .stButton button[kind="secondary"] {
+    border-color: var(--line) !important; color: var(--ink) !important;
+  }
+  [data-testid="stAppViewBlockContainer"], .block-container {
+    padding: 0.6rem 1.1rem 3rem;
+  }
+  .il-hero { padding: 1.5rem 1.35rem 1.6rem; border-radius: 22px; }
+  .il-bignum { font-size: clamp(2.8rem, 16vw, 4rem); }
+  .il-kpi { padding: 0.95rem 1rem; }
+  .il-kpis { border-radius: 20px; }
+  .il-section { margin-top: 1.7rem; }
+  .il-section-title { font-size: 1.15rem; }
 }
 </style>
 """
@@ -459,22 +492,25 @@ def section(title: str, kicker: str = "") -> None:
     )
 
 
-def _sticker(glyph: str) -> str:
+def _sticker() -> str:
+    """A printed sticker: ring of type around a receipt mark."""
     return (
         '<svg class="il-sticker" viewBox="0 0 132 132" aria-hidden="true">'
         '<defs><path id="il-circle" d="M66,66 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0"/></defs>'
         f'<circle cx="66" cy="66" r="64" fill="{LILAC}"/>'
-        f'<circle cx="66" cy="66" r="52" fill="none" stroke="{INK}" stroke-width="0.8" opacity="0.35"/>'
+        f'<circle cx="66" cy="66" r="52" fill="none" stroke="{INK}" stroke-width="0.8" opacity="0.3"/>'
         f'<text font-family="Inter, sans-serif" font-size="8" letter-spacing="1.7" fill="{INK}">'
         '<textPath href="#il-circle" startOffset="2">REAL PRICES · REAL RECEIPTS · </textPath></text>'
-        f'<text x="66" y="80" text-anchor="middle" font-family="Inter, Helvetica, sans-serif" '
-        f'font-weight="600" font-size="30" fill="{INK}">{glyph}</text>'
+        f'<g fill="none" stroke="{INK}" stroke-width="2.1" stroke-linecap="round" '
+        'stroke-linejoin="round">'
+        '<path d="M57 49h18v30l-4.5-3.2-4.5 3.2-4.5-3.2-4.5 3.2z"/>'
+        '<path d="M61.5 58h9M61.5 64h9M61.5 70h5.5"/>'
+        '</g>'
         '</svg>'
     )
 
 
-def hero(kicker: str, value: str, note: str, sub: str = "", unit: str = "%",
-         sticker: str = "₹") -> None:
+def hero(kicker: str, value: str, note: str, sub: str = "", unit: str = "%") -> None:
     st.markdown(
         _blk(f"""
         <div class="il-hero">
@@ -485,7 +521,7 @@ def hero(kicker: str, value: str, note: str, sub: str = "", unit: str = "%",
             <div class="il-hero-note">{note}</div>
             {f'<div class="il-hero-sub">{sub}</div>' if sub else ''}
           </div>
-          {_sticker(sticker)}
+          {_sticker()}
         </div>
         """),
         unsafe_allow_html=True,

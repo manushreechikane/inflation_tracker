@@ -38,7 +38,7 @@ def is_demo() -> bool:
 
 
 def mode_label() -> str:
-    return "Demo · this browser only" if is_demo() else "Local · SQLite"
+    return "Demo · sample basket" if is_demo() else "Local · SQLite"
 
 
 # --------------------------------------------------------------------------- #

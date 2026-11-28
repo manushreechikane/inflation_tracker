@@ -133,7 +133,7 @@ def page_overview() -> None:
     movers = inflation.head(1)
     kpis = [
         ("Spent", theme.compact_money(spend), f"across {receipts_total} receipts"),
-        ("Tracked products", str(products), f"{len(inflation)} with enough history"),
+        ("Tracked products", str(products), f"{len(inflation)} with repeat prices"),
         ("Basket change", theme.signed(change), "since the first month"),
         ("Biggest riser", movers.iloc[0]["product"] if not movers.empty else "—",
          theme.signed(movers.iloc[0]["change_pct"]) if not movers.empty else "no data"),
@@ -199,8 +199,8 @@ def page_scan() -> None:
     theme.section("Add a receipt", "photo in · prices out")
     if data.is_demo():
         theme.note(
-            "Demo mode: the image is read in memory and the result stays in this browser tab. "
-            "Nothing is uploaded to a server."
+            "Demo mode: a receipt you add is held in this session only. It is never written "
+            "to the shared database, and the sample basket is reloaded on reset."
         )
 
     source = st.radio(
@@ -648,8 +648,9 @@ def page_data() -> None:
     if data.is_demo():
         theme.section("Demo data", "seeded, resettable")
         theme.note(
-            "This deployment runs in public demo mode: receipts live in this browser session, "
-            "never in the shared database. The seeded basket is here so the app is not empty."
+            "This deployment runs in demo mode. Receipts you add live in this session only; "
+            "the shared database is never written to. The seeded basket is here so the app "
+            "is never empty."
         )
         if st.button("Reset demo data", key="reset_demo"):
             data.reset_demo()
